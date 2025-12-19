@@ -188,3 +188,125 @@ const App = () => {
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
+
+            // 替換為您在步驟一中獲得的 Firebase 配置
+const firebaseConfig = {
+   apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
+  authDomain: "my-studio-dashboard.firebaseapp.com",
+  projectId: "my-studio-dashboard",
+  storageBucket: "my-studio-dashboard.firebasestorage.app",
+  messagingSenderId: "219057281896",
+  appId: "1:219057281896:web:63304825302437231754dd"
+};
+
+// 初始化 Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Firestore 集合名稱和文件 ID
+const COLLECTION_NAME = 'workspace_navigator_states';
+const DOCUMENT_ID = 'user_tool_order';
+
+const { useState, useEffect, useRef } = React;
+
+// ... (其餘的 App 元件程式碼保持不變)
+
+const App = () => {
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const aiRef = useRef(null);
+    const workflowRef = useRef(null);
+    const mediaRef = useRef(null);
+
+    // 1. AI 思考工具 (10項) - 保持不變
+    const initialAiTools = [
+        // ... (這裡放您原來的 aiTools 陣列內容)
+    ];
+    const [aiTools, setAiTools] = useState(initialAiTools);
+
+    // 2. 生產力工具 (8項) - 保持不變
+    const initialWorkflowTools = [
+        // ... (這裡放您原來的 workflowTools 陣列內容)
+    ];
+    const [workflowTools, setWorkflowTools] = useState(initialWorkflowTools);
+
+    // 3. 影音媒體工具 (6項) - 保持不變
+    const initialMediaTools = [
+        // ... (這裡放您原來的 mediaTools 陣列內容)
+    ];
+    const [mediaTools, setMediaTools] = useState(initialMediaTools);
+
+    // ... (scrollToSection 函數保持不變)
+
+    // 新增: 儲存排序到 Firestore
+    const saveOrder = (type, order) => {
+        db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({
+            [type]: order
+        }, { merge: true })
+        .then(() => console.log(`${type} order saved to Firestore.`))
+        .catch((error) => console.error(`Error saving ${type} order: `, error));
+    };
+
+    // 新增: 根據儲存的順序重新排序
+    const reorderTools = (tools, order) => {
+        if (!order || order.length === 0) return tools;
+        const map = new Map(tools.map(tool => [tool.id, tool]));
+        return order.map(id => map.get(id)).filter(tool => tool);
+    };
+
+    useEffect(() => {
+        // 載入時從 Firestore 讀取排序
+        db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get().then((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                if (data.ai) setAiTools(reorderTools(initialAiTools, data.ai));
+                if (data.workflow) setWorkflowTools(reorderTools(initialWorkflowTools, data.workflow));
+                if (data.media) setMediaTools(reorderTools(initialMediaTools, data.media));
+            }
+        }).catch((error) => {
+            console.log("Error getting document:", error);
+        });
+
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        lucide.createIcons();
+
+        // 初始化拖拉
+        const initSortable = (ref, type, setTools, initialTools) => {
+            if (ref.current) {
+                Sortable.create(ref.current, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    onEnd: (evt) => {
+                        // 處理拖拉後的順序更新
+                        const newOrder = Array.from(evt.to.children).map(el => el.dataset.id);
+                        
+                        // 更新 React 狀態
+                        const newTools = reorderTools(initialTools, newOrder);
+                        setTools(newTools);
+
+                        // 儲存到 Firestore
+                        saveOrder(type, newOrder);
+
+                        lucide.createIcons();
+                    }
+                });
+            }
+        };
+
+        // 呼叫初始化函數時傳入狀態更新函數和初始工具列表
+        initSortable(aiRef, 'ai', setAiTools, initialAiTools);
+        initSortable(workflowRef, 'workflow', setWorkflowTools, initialWorkflowTools);
+        initSortable(mediaRef, 'media', setMediaTools, initialMediaTools);
+
+        return () => clearInterval(timer);
+    }, []); // 確保只在載入時執行一次
+
+    // ... (其餘的 App 元件程式碼保持不變)
+
+    return (
+        // ... (這裡放您的 JSX 渲染內容)
+    );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
