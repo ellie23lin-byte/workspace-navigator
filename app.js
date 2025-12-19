@@ -1,4 +1,4 @@
-// 替換為您在步驟一中獲得的 Firebase 配置
+// 1. Firebase 配置
 const firebaseConfig = {
   apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
   authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -8,39 +8,40 @@ const firebaseConfig = {
   appId: "1:219057281896:web:63304825302437231754dd"
 };
 
-// 初始化 Firebase
-const app = firebase.initializeApp(firebaseConfig);
+// 2. 初始化 Firebase (確保只初始化一次)
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.firestore();
 
-// Firestore 集合名稱和文件 ID
+// 3. 定義常數與輔助函式
 const COLLECTION_NAME = 'workspace_navigator_states';
 const DOCUMENT_ID = 'user_tool_order';
 
 const { useState, useEffect, useRef } = React;
 
-// 新增: 儲存排序到 Firestore
 const saveOrder = (type, order) => {
     db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({
         [type]: order
     }, { merge: true })
-    .then(() => console.log(`${type} order saved to Firestore.`))
-    .catch((error) => console.error(`Error saving ${type} order: `, error));
+    .then(() => console.log(`${type} order saved.`))
+    .catch((error) => console.error(`Error saving ${type}: `, error));
 };
 
-// 新增: 根據儲存的順序重新排序
 const reorderTools = (tools, order) => {
     if (!order || order.length === 0) return tools;
     const map = new Map(tools.map(tool => [tool.id, tool]));
     return order.map(id => map.get(id)).filter(tool => tool);
 };
 
+// 4. 主程式元件
 const App = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const aiRef = useRef(null);
     const workflowRef = useRef(null);
     const mediaRef = useRef(null);
 
-    // 1. AI 思考工具 (10項)
+    // 工具原始資料
     const initialAiTools = [
         { id: 'ai-1', name: 'Manus', desc: '通用型 AI Agent 代理人', icon: 'bot', url: 'https://manus.ai', color: 'bg-stone-800 text-white border-stone-900' },
         { id: 'ai-2', name: 'Gemini', desc: 'Google 多模態核心模型', icon: 'sparkles', url: 'https://gemini.google.com', color: 'bg-blue-100 text-blue-600 border-blue-200' },
@@ -53,9 +54,7 @@ const App = () => {
         { id: 'ai-9', name: 'Perplexity', desc: 'AI 驅動的知識搜尋引擎', icon: 'zap', url: 'https://www.perplexity.ai', color: 'bg-cyan-100 text-cyan-600 border-cyan-200' },
         { id: 'ai-10', name: 'Leonardo', desc: '創意影像生成與畫質提升', icon: 'image', url: 'https://leonardo.ai', color: 'bg-amber-100 text-amber-700 border-amber-200' },
     ];
-    const [aiTools, setAiTools] = useState(initialAiTools );
-
-    // 2. 生產力工具 (8項)
+    
     const initialWorkflowTools = [
         { id: 'wf-1', name: 'n8n', category: '自動化', url: 'https://n8n.io', icon: 'infinity', bgColor: 'bg-rose-50 border-rose-100 text-rose-600' },
         { id: 'wf-2', name: 'Make', category: '自動化', url: 'https://www.make.com', icon: 'zap', bgColor: 'bg-violet-50 border-violet-100 text-violet-600' },
@@ -66,9 +65,7 @@ const App = () => {
         { id: 'wf-7', name: 'Notion', category: '協作', url: 'https://www.notion.so', icon: 'book-open', bgColor: 'bg-stone-100 border-stone-200 text-stone-600' },
         { id: 'wf-8', name: 'GitHub', category: '代碼', url: 'https://github.com', icon: 'code-2', bgColor: 'bg-indigo-50 border-indigo-100 text-indigo-600' },
     ];
-    const [workflowTools, setWorkflowTools] = useState(initialWorkflowTools );
 
-    // 3. 影音媒體工具 (6項)
     const initialMediaTools = [
         { id: 'md-1', name: 'CapCut', category: '剪輯', url: 'https://www.capcut.com', icon: 'video', bgColor: 'bg-cyan-50 border-cyan-100 text-cyan-600' },
         { id: 'md-2', name: 'Canva', category: '設計', url: 'https://www.canva.com', icon: 'pen-tool', bgColor: 'bg-fuchsia-50 border-fuchsia-100 text-fuchsia-600' },
@@ -77,7 +74,10 @@ const App = () => {
         { id: 'md-5', name: 'Soundtrap', category: '音樂', url: 'https://www.soundtrap.com', icon: 'waves', bgColor: 'bg-rose-50 border-rose-100 text-rose-600' },
         { id: 'md-6', name: 'Suno', category: '歌曲', url: 'https://suno.com', icon: 'music', bgColor: 'bg-orange-50 border-orange-100 text-orange-600' },
     ];
-    const [mediaTools, setMediaTools] = useState(initialMediaTools );
+
+    const [aiTools, setAiTools] = useState(initialAiTools);
+    const [workflowTools, setWorkflowTools] = useState(initialWorkflowTools);
+    const [mediaTools, setMediaTools] = useState(initialMediaTools);
 
     const scrollToSection = (id) => {
         const element = document.getElementById(id);
@@ -87,7 +87,7 @@ const App = () => {
     };
 
     useEffect(() => {
-        // 載入時從 Firestore 讀取排序
+        // 從 Firestore 讀取排序
         db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get().then((doc) => {
             if (doc.exists) {
                 const data = doc.data();
@@ -95,46 +95,37 @@ const App = () => {
                 if (data.workflow) setWorkflowTools(reorderTools(initialWorkflowTools, data.workflow));
                 if (data.media) setMediaTools(reorderTools(initialMediaTools, data.media));
             }
-        }).catch((error) => {
-            console.log("Error getting document:", error);
         });
 
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        lucide.createIcons();
-
-        // 初始化拖拉
-        const initSortable = (ref, type, setTools, initialTools) => {
+        
+        // 初始化拖拉功能
+        const initSortable = (ref, type, setTools, sourceTools) => {
             if (ref.current) {
                 Sortable.create(ref.current, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
-                    dragClass: 'sortable-drag',
                     onEnd: (evt) => {
-                        // 處理拖拉後的順序更新
                         const newOrder = Array.from(evt.to.children).map(el => el.dataset.id);
-                        
-                        // 更新 React 狀態
-                        const newTools = reorderTools(initialTools, newOrder);
-                        setTools(newTools);
-
-                        // 儲存到 Firestore
+                        const updatedTools = reorderTools(sourceTools, newOrder);
+                        setTools(updatedTools);
                         saveOrder(type, newOrder);
-
-                        lucide.createIcons();
+                        setTimeout(() => lucide.createIcons(), 0);
                     }
                 });
             }
         };
 
-        // 呼叫初始化函數時傳入狀態更新函數和初始工具列表
         initSortable(aiRef, 'ai', setAiTools, initialAiTools);
         initSortable(workflowRef, 'workflow', setWorkflowTools, initialWorkflowTools);
         initSortable(mediaRef, 'media', setMediaTools, initialMediaTools);
 
         return () => clearInterval(timer);
-    }, []); // 確保只在載入時執行一次
+    }, []);
 
-    useEffect(() => { lucide.createIcons(); });
+    useEffect(() => {
+        lucide.createIcons();
+    }, [aiTools, workflowTools, mediaTools]);
 
     return (
         <div className="min-h-screen">
@@ -248,5 +239,6 @@ const App = () => {
     );
 };
 
+// 渲染
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
