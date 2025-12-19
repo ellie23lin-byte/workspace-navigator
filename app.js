@@ -1,11 +1,11 @@
 // 替換為您在步驟一中獲得的 Firebase 配置
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
+  authDomain: "my-studio-dashboard.firebaseapp.com",
+  projectId: "my-studio-dashboard",
+  storageBucket: "my-studio-dashboard.firebasestorage.app",
+  messagingSenderId: "219057281896",
+  appId: "1:219057281896:web:63304825302437231754dd"
 };
 
 // 初始化 Firebase
