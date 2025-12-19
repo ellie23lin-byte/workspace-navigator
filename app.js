@@ -1,18 +1,24 @@
 // 1. Firebase 配置
 const firebaseConfig = {
-  apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
-  authDomain: "my-studio-dashboard.firebaseapp.com",
-  projectId: "my-studio-dashboard",
-  storageBucket: "my-studio-dashboard.firebasestorage.app",
-  messagingSenderId: "219057281896",
-  appId: "1:219057281896:web:63304825302437231754dd"
+    apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
+    authDomain: "my-studio-dashboard.firebaseapp.com",
+    projectId: "my-studio-dashboard",
+    storageBucket: "my-studio-dashboard.firebasestorage.app",
+    messagingSenderId: "219057281896",
+    appId: "1:219057281896:web:63304825302437231754dd"
 };
 
-// 2. 初始化 Firebase (確保只初始化一次)
+// 2. 初始化 Firebase (加上強連線設定)
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
+
+// 針對網頁託管環境優化連線穩定性
+db.settings({ 
+    experimentalForceLongPolling: true,
+    merge: true 
+});
 
 // 3. 定義常數與輔助函式
 const COLLECTION_NAME = 'workspace_navigator_states';
@@ -20,28 +26,33 @@ const DOCUMENT_ID = 'user_tool_order';
 
 const { useState, useEffect, useRef } = React;
 
+// 儲存函式
 const saveOrder = (type, order) => {
     db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({
-        [type]: order
+        [type]: order,
+        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true })
-    .then(() => console.log(`${type} order saved.`))
-    .catch((error) => console.error(`Error saving ${type}: `, error));
+    .then(() => console.log(`[Firebase] ${type} 順序儲存成功`))
+    .catch((error) => console.error(`[Firebase] 儲存失敗:`, error));
 };
 
+// 排序處理函式
 const reorderTools = (tools, order) => {
-    if (!order || order.length === 0) return tools;
+    if (!order || !Array.isArray(order) || order.length === 0) return tools;
     const map = new Map(tools.map(tool => [tool.id, tool]));
-    return order.map(id => map.get(id)).filter(tool => tool);
+    return order.map(id => map.get(id)).filter(tool => tool !== undefined);
 };
 
 // 4. 主程式元件
 const App = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
+    
+    // 容器引用
     const aiRef = useRef(null);
     const workflowRef = useRef(null);
     const mediaRef = useRef(null);
 
-    // 工具原始資料
+    // 工具原始資料 (不變)
     const initialAiTools = [
         { id: 'ai-1', name: 'Manus', desc: '通用型 AI Agent 代理人', icon: 'bot', url: 'https://manus.ai', color: 'bg-stone-800 text-white border-stone-900' },
         { id: 'ai-2', name: 'Gemini', desc: 'Google 多模態核心模型', icon: 'sparkles', url: 'https://gemini.google.com', color: 'bg-blue-100 text-blue-600 border-blue-200' },
@@ -87,30 +98,42 @@ const App = () => {
     };
 
     useEffect(() => {
-        // 從 Firestore 讀取排序
+        // A. 初始載入：從資料庫同步順序
         db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get().then((doc) => {
             if (doc.exists) {
                 const data = doc.data();
-                if (data.ai) setAiTools(reorderTools(initialAiTools, data.ai));
-                if (data.workflow) setWorkflowTools(reorderTools(initialWorkflowTools, data.workflow));
-                if (data.media) setMediaTools(reorderTools(initialMediaTools, data.media));
+                if (data.ai) setAiTools(prev => reorderTools(initialAiTools, data.ai));
+                if (data.workflow) setWorkflowTools(prev => reorderTools(initialWorkflowTools, data.workflow));
+                if (data.media) setMediaTools(prev => reorderTools(initialMediaTools, data.media));
+                console.log("[Firebase] 順序同步成功");
             }
-        });
+        }).catch(err => console.warn("[Firebase] 初始同步失敗，使用預設順序", err));
 
+        // B. 時間更新
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         
-        // 初始化拖拉功能
+        // C. 初始化拖拉功能
         const initSortable = (ref, type, setTools, sourceTools) => {
             if (ref.current) {
                 Sortable.create(ref.current, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
+                    draggable: "[data-id]",
                     onEnd: (evt) => {
-                        const newOrder = Array.from(evt.to.children).map(el => el.dataset.id);
+                        // 取得最新 DOM ID 列表
+                        const newOrder = Array.from(evt.to.children)
+                                            .map(el => el.getAttribute('data-id'))
+                                            .filter(id => id !== null);
+                        
+                        // 更新 React UI
                         const updatedTools = reorderTools(sourceTools, newOrder);
                         setTools(updatedTools);
+                        
+                        // 寫入資料庫
                         saveOrder(type, newOrder);
-                        setTimeout(() => lucide.createIcons(), 0);
+                        
+                        // 延遲更新圖示
+                        setTimeout(() => lucide.createIcons(), 50);
                     }
                 });
             }
@@ -123,6 +146,7 @@ const App = () => {
         return () => clearInterval(timer);
     }, []);
 
+    // 當狀態改變時，確保 Lucide 圖示重新渲染
     useEffect(() => {
         lucide.createIcons();
     }, [aiTools, workflowTools, mediaTools]);
