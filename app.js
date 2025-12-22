@@ -1,4 +1,4 @@
-// V2_1 升級版：新增管理編輯模式與區塊新增功能
+// V2_1 基準版：找回導航選單 + 管理編輯模式 + Lucide 產出圖標
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -22,7 +22,7 @@ const { useState, useEffect, useRef } = React;
 
 const App = () => {
     const [tools, setTools] = useState(null);
-    const [isEditing, setIsEditing] = useState(false); // 編輯模式開關
+    const [isEditing, setIsEditing] = useState(false);
     const toolsRef = useRef(null);
     const [currentTime, setCurrentTime] = useState(new Date());
     const sectionOrder = ['ai', 'workflow', 'design', 'outputs', 'media'];
@@ -30,6 +30,7 @@ const App = () => {
         ai: useRef(null), workflow: useRef(null), design: useRef(null), outputs: useRef(null), media: useRef(null)
     };
 
+    // 您的 V2_1 核心數據基準
     const defaultInitial = {
         "ai": [
             { "id": "ai-2", "name": "Gemini", "desc": "Google AI", "url": "https://gemini.google.com", "color": "bg-blue-100" },
@@ -60,6 +61,13 @@ const App = () => {
         setTools(newData);
         toolsRef.current = newData;
         if(db) db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(newData);
+    };
+
+    const scrollToSection = (id) => {
+        const el = document.getElementById(id);
+        if (el) {
+            window.scrollTo({ top: el.offsetTop - 80, behavior: 'smooth' });
+        }
     };
 
     useEffect(() => {
@@ -123,45 +131,69 @@ const App = () => {
         return iconMap[id] || null;
     };
 
-    if (!tools) return <div className="min-h-screen bg-[#FDFCF5] flex items-center justify-center font-mono text-stone-400">Loading V2_1...</div>;
+    if (!tools) return <div className="min-h-screen bg-[#FDFCF5] flex items-center justify-center font-mono text-stone-400 italic">Restoring V2_1...</div>;
 
     return (
-        <div className={`min-h-screen pb-20 bg-[#FDFCF5] ${isEditing ? 'edit-mode' : ''}`}>
+        <div className={`min-h-screen pb-20 bg-[#FDFCF5] ${isEditing ? 'bg-stone-50/50' : ''}`}>
+            {/* Header 恢復導航選單 */}
             <header className="sticky top-0 z-50 bg-[#FDFCF5]/80 backdrop-blur-md border-b border-stone-200 px-8 py-4 flex justify-between items-center">
                 <div className="flex items-center space-x-8">
-                    <h1 className="font-bold text-stone-800 text-lg flex items-center gap-2"><i data-lucide="zap" className="w-5 h-5 text-amber-400"></i> Navigator</h1>
+                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({top:0, behavior:'smooth'})}>
+                        <div className="w-8 h-8 bg-stone-800 rounded-lg flex items-center justify-center text-white shadow-sm">
+                            <i data-lucide="zap" className="w-4 h-4"></i>
+                        </div>
+                        <h1 className="font-bold text-stone-800 text-lg hidden sm:block">Navigator</h1>
+                    </div>
+                    
+                    {/* 找回導航選單 Navigation Menu */}
+                    <nav className="flex space-x-6 border-l border-stone-200 pl-8">
+                        {sectionOrder.map(k => (
+                            <button 
+                                key={k} 
+                                onClick={() => scrollToSection(k)} 
+                                className="text-[10px] font-black text-stone-400 hover:text-stone-800 uppercase tracking-[0.2em] transition-colors"
+                            >
+                                {k === 'outputs' ? '我的產出' : k}
+                            </button>
+                        ))}
+                    </nav>
+                </div>
+
+                <div className="flex items-center space-x-4">
                     <button 
                         onClick={() => setIsEditing(!isEditing)} 
-                        className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${isEditing ? 'bg-rose-500 text-white border-rose-500 shadow-lg' : 'bg-white text-stone-400 border-stone-200 hover:border-stone-400'}`}
+                        className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${isEditing ? 'bg-rose-500 text-white border-rose-500 shadow-md' : 'bg-white text-stone-400 border-stone-200 hover:border-stone-400'}`}
                     >
-                        {isEditing ? '完成編輯 Done' : '管理編輯 Edit'}
+                        {isEditing ? '完成 Done' : '編輯 Edit'}
                     </button>
+                    <div className="text-xs font-mono text-stone-500 bg-white px-3 py-1 rounded-full border border-stone-100 shadow-sm hidden md:block">
+                        {currentTime.toLocaleTimeString('zh-TW', { hour12: false })}
+                    </div>
                 </div>
-                <div className="text-xs font-mono text-stone-500 bg-white px-3 py-1 rounded-full border border-stone-100 shadow-sm">{currentTime.toLocaleTimeString('zh-TW', { hour12: false })}</div>
             </header>
 
             <main className="max-w-[1400px] mx-auto px-8 mt-12 space-y-16">
                 {sectionOrder.map(type => (
-                    <section key={type} id={type}>
+                    <section key={type} id={type} className="scroll-mt-24">
                         <div className="flex justify-between items-center mb-6 border-b border-stone-200 pb-2">
                             <h2 className="text-[11px] font-black text-stone-400 uppercase tracking-[0.3em] flex items-center gap-3">
                                 <i data-lucide={type==='ai'?'brain':type==='workflow'?'rocket':type==='design'?'palette':type==='outputs'?'sparkles':'video'} className={`w-4 h-4 ${type==='outputs'?'text-rose-400':''}`}></i>
-                                {type === 'outputs' ? '我的產出' : type}
+                                {type === 'outputs' ? '我的產出 My Outputs' : type}
                             </h2>
                         </div>
                         <div ref={sectionRefs[type]} className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {tools[type].map(t => (
-                                <div key={t.id} className={`group relative bg-white border border-stone-200 rounded-2xl p-3 transition-all ${isEditing ? 'hover:border-rose-300 ring-1 ring-transparent hover:ring-rose-100' : 'hover:shadow-xl'}`}>
+                                <div key={t.id} className={`group relative bg-white border border-stone-200 rounded-2xl p-3 transition-all ${isEditing ? 'hover:border-rose-300 ring-2 ring-transparent hover:ring-rose-50 cursor-default' : 'hover:shadow-xl cursor-grab active:cursor-grabbing'}`}>
                                     {isEditing && (
                                         <button 
                                             onClick={() => handleDelete(type, t.id)}
-                                            className="absolute -top-2 -right-2 bg-rose-500 text-white p-1 rounded-full shadow-lg z-50 hover:bg-rose-600 transition-transform hover:scale-110"
+                                            className="absolute -top-2 -right-2 bg-rose-500 text-white p-1 rounded-full shadow-lg z-50 hover:scale-110 transition-transform"
                                         >
                                             <i data-lucide="x" className="w-3 h-3"></i>
                                         </button>
                                     )}
-                                    <a href={t.url} target="_blank" className={`flex items-center gap-3 ${isEditing ? 'pointer-events-none' : ''}`}>
-                                        <div className={`w-10 h-10 rounded-xl ${t.color || 'bg-stone-50'} flex items-center justify-center shrink-0 border border-stone-50 relative`}>
+                                    <a href={t.url} target="_blank" className={`flex items-center gap-3 ${isEditing ? 'pointer-events-none' : ''}`} onClick={e => isEditing && e.preventDefault()}>
+                                        <div className={`w-10 h-10 rounded-xl ${t.color || 'bg-stone-50'} flex items-center justify-center shrink-0 border border-stone-50 relative overflow-hidden`}>
                                             {type === 'outputs' && getCustomIcon(t.id) ? (
                                                 <i data-lucide={getCustomIcon(t.id)} className="w-5 h-5 text-stone-600"></i>
                                             ) : (
@@ -181,17 +213,17 @@ const App = () => {
                             {isEditing && (
                                 <button 
                                     onClick={() => handleAdd(type)}
-                                    className="border-2 border-dashed border-stone-200 rounded-2xl p-3 flex items-center justify-center gap-2 text-stone-400 hover:border-stone-400 hover:text-stone-600 transition-all group"
+                                    className="border-2 border-dashed border-stone-200 rounded-2xl p-3 flex items-center justify-center gap-2 text-stone-400 hover:border-stone-400 hover:text-stone-600 transition-all"
                                 >
-                                    <i data-lucide="plus" className="w-4 h-4 group-hover:scale-110 transition-transform"></i>
-                                    <span className="text-[10px] font-black uppercase tracking-widest">新增按鈕</span>
+                                    <i data-lucide="plus" className="w-4 h-4"></i>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">新增</span>
                                 </button>
                             )}
                         </div>
                     </section>
                 ))}
             </main>
-            <footer className="text-center py-20 text-stone-300 text-[10px] font-black uppercase tracking-[0.5em]">Beige Studio &bull; V2.1 Edit Mode</footer>
+            <footer className="text-center py-20 text-stone-300 text-[10px] font-black uppercase tracking-[0.5em]">Beige Studio &bull; Navigator V2.1</footer>
         </div>
     );
 };
