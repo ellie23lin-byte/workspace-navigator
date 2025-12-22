@@ -13,7 +13,7 @@ const db = firebase.firestore();
 db.settings({ experimentalForceLongPolling: true });
 
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v9_refined'; 
+const DOCUMENT_ID = 'user_tool_order_v10_branding'; 
 
 const { useState, useEffect, useRef } = React;
 
@@ -21,46 +21,47 @@ const App = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [loading, setLoading] = useState(true);
 
+    // 完整的原始工具資料
     const initialData = {
         ai: [
-            { id: 'ai-1', name: 'Manus', desc: 'AI Agent', icon: 'bot', url: 'https://manus.ai', color: 'bg-stone-800 text-white border-stone-900' },
-            { id: 'ai-2', name: 'Gemini', desc: 'Google AI', icon: 'sparkles', url: 'https://gemini.google.com', color: 'bg-blue-100 text-blue-600 border-blue-200' },
-            { id: 'ai-6', name: 'ChatGPT', desc: 'OpenAI', icon: 'message-square', url: 'https://chat.openai.com', color: 'bg-emerald-100 text-emerald-600 border-emerald-200' },
-            { id: 'ai-7', name: 'Claude', desc: 'Anthropic', icon: 'brain-circuit', url: 'https://claude.ai', color: 'bg-orange-100 text-orange-600 border-orange-200' },
-            { id: 'ai-9', name: 'Perplexity', desc: 'Search AI', icon: 'search', url: 'https://www.perplexity.ai', color: 'bg-cyan-100 text-cyan-600 border-cyan-200' },
-            { id: 'ai-3', name: 'Gamma', desc: 'AI PPT', icon: 'presentation', url: 'https://gamma.app', color: 'bg-purple-100 text-purple-600 border-purple-200' },
-            { id: 'ai-4', name: 'NotebookLM', desc: 'AI Notes', icon: 'book-open', url: 'https://notebooklm.google.com', color: 'bg-teal-100 text-teal-600 border-teal-200' },
-            { id: 'ai-11', name: 'v0.dev', desc: 'Vercel UI', icon: 'code', url: 'https://v0.dev', color: 'bg-zinc-100 text-zinc-800 border-zinc-200' },
-            { id: 'ai-12', name: 'Kimi', desc: 'Long Text', icon: 'align-left', url: 'https://kimi.moonshot.cn', color: 'bg-green-100 text-green-600 border-green-200' },
-            { id: 'ai-10', name: 'Leonardo', desc: 'AI Image', icon: 'image', url: 'https://leonardo.ai', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-            { id: 'ai-5', name: 'AI Studio', desc: 'Google Dev', icon: 'terminal', url: 'https://aistudio.google.com', color: 'bg-indigo-100 text-indigo-600 border-indigo-200' },
-            { id: 'ai-8', name: 'DeepL', desc: 'AI Trans', icon: 'languages', url: 'https://www.deepl.com', color: 'bg-blue-50 text-blue-800 border-blue-100' },
+            { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800' },
+            { id: 'ai-2', name: 'Gemini', desc: 'Google AI', url: 'https://gemini.google.com', color: 'bg-blue-50' },
+            { id: 'ai-6', name: 'ChatGPT', desc: 'OpenAI', url: 'https://chat.openai.com', color: 'bg-emerald-50' },
+            { id: 'ai-7', name: 'Claude', desc: 'Anthropic', url: 'https://claude.ai', color: 'bg-orange-50' },
+            { id: 'ai-9', name: 'Perplexity', desc: 'Search AI', url: 'https://www.perplexity.ai', color: 'bg-cyan-50' },
+            { id: 'ai-3', name: 'Gamma', desc: 'AI PPT', url: 'https://gamma.app', color: 'bg-purple-50' },
+            { id: 'ai-4', name: 'NotebookLM', desc: 'AI Notes', url: 'https://notebooklm.google.com', color: 'bg-teal-50' },
+            { id: 'ai-11', name: 'v0.dev', desc: 'Vercel UI', url: 'https://v0.dev', color: 'bg-zinc-50' },
+            { id: 'ai-12', name: 'Kimi', desc: 'Long Text', url: 'https://kimi.moonshot.cn', color: 'bg-green-50' },
+            { id: 'ai-10', name: 'Leonardo', desc: 'AI Image', url: 'https://leonardo.ai', color: 'bg-amber-50' },
+            { id: 'ai-5', name: 'AI Studio', desc: 'Google Dev', url: 'https://aistudio.google.com', color: 'bg-indigo-50' },
+            { id: 'ai-8', name: 'DeepL', desc: 'AI Trans', url: 'https://www.deepl.com', color: 'bg-blue-50' },
         ],
         workflow: [
-            { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', icon: 'infinity', bgColor: 'bg-rose-50 border-rose-100 text-rose-600' },
-            { id: 'wf-2', name: 'Make', url: 'https://www.make.com', icon: 'zap', bgColor: 'bg-violet-50 border-violet-100 text-violet-600' },
-            { id: 'wf-11', name: 'Firebase', url: 'https://console.firebase.google.com', icon: 'flame', bgColor: 'bg-orange-50 border-orange-100 text-orange-600' },
-            { id: 'wf-9', name: 'Linear', url: 'https://linear.app', icon: 'check-circle', bgColor: 'bg-indigo-50 border-indigo-100 text-indigo-600' },
-            { id: 'wf-7', name: 'Notion', url: 'https://www.notion.so', icon: 'book-open', bgColor: 'bg-stone-100 border-stone-200 text-stone-600' },
-            { id: 'wf-8', name: 'GitHub', url: 'https://github.com', icon: 'github', bgColor: 'bg-slate-100 border-slate-200 text-slate-700' },
-            { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', icon: 'layout', bgColor: 'bg-zinc-50 border-zinc-200 text-zinc-800' },
-            { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', icon: 'monitor', bgColor: 'bg-blue-50 border-blue-100 text-blue-600' },
-            { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', icon: 'file-code', bgColor: 'bg-amber-50 border-amber-100 text-amber-600' },
-            { id: 'wf-10', name: 'Arc Boost', url: 'https://arc.net', icon: 'compass', bgColor: 'bg-orange-50 border-orange-100 text-orange-600' },
+            { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', color: 'bg-rose-50' },
+            { id: 'wf-2', name: 'Make', url: 'https://www.make.com', color: 'bg-violet-50' },
+            { id: 'wf-11', name: 'Firebase', url: 'https://console.firebase.google.com', color: 'bg-orange-50' },
+            { id: 'wf-9', name: 'Linear', url: 'https://linear.app', color: 'bg-indigo-50' },
+            { id: 'wf-7', name: 'Notion', url: 'https://www.notion.so', color: 'bg-stone-50' },
+            { id: 'wf-8', name: 'GitHub', url: 'https://github.com', color: 'bg-slate-50' },
+            { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', color: 'bg-zinc-50' },
+            { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', color: 'bg-blue-50' },
+            { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', color: 'bg-amber-50' },
+            { id: 'wf-10', name: 'Arc Boost', url: 'https://arc.net', color: 'bg-orange-50' },
         ],
         media: [
-            { id: 'md-1', name: 'CapCut', url: 'https://www.capcut.com', icon: 'video', bgColor: 'bg-cyan-50 border-cyan-100 text-cyan-600' },
-            { id: 'md-7', name: 'Luma AI', url: 'https://lumalabs.ai', icon: 'film', bgColor: 'bg-purple-50 border-purple-100 text-purple-600' },
-            { id: 'md-2', name: 'Canva', url: 'https://www.canva.com', icon: 'pen-tool', bgColor: 'bg-fuchsia-50 border-fuchsia-100 text-fuchsia-600' },
-            { id: 'md-8', name: 'ElevenLabs', url: 'https://elevenlabs.io', icon: 'mic', bgColor: 'bg-yellow-50 border-yellow-100 text-yellow-700' },
-            { id: 'md-6', name: 'Suno', url: 'https://suno.com', icon: 'music', bgColor: 'bg-orange-50 border-orange-100 text-orange-600' },
-            { id: 'md-3', name: 'Remove.bg', url: 'https://www.remove.bg', icon: 'scissors', bgColor: 'bg-lime-50 border-lime-100 text-lime-600' },
-            { id: 'md-4', name: 'Stable Audio', url: 'https://stableaudio.com', icon: 'audio-lines', bgColor: 'bg-indigo-50 border-indigo-100 text-indigo-600' },
-            { id: 'md-5', name: 'Soundtrap', url: 'https://www.soundtrap.com', icon: 'waves', bgColor: 'bg-rose-50 border-rose-100 text-rose-600' },
+            { id: 'md-1', name: 'CapCut', url: 'https://www.capcut.com', color: 'bg-cyan-50' },
+            { id: 'md-7', name: 'Luma AI', url: 'https://lumalabs.ai', color: 'bg-purple-50' },
+            { id: 'md-2', name: 'Canva', url: 'https://www.canva.com', color: 'bg-fuchsia-50' },
+            { id: 'md-8', name: 'ElevenLabs', url: 'https://elevenlabs.io', color: 'bg-yellow-50' },
+            { id: 'md-6', name: 'Suno', url: 'https://suno.com', color: 'bg-orange-50' },
+            { id: 'md-3', name: 'Remove.bg', url: 'https://www.remove.bg', color: 'bg-lime-50' },
+            { id: 'md-4', name: 'Stable Audio', url: 'https://stableaudio.com', color: 'bg-indigo-50' },
+            { id: 'md-5', name: 'Soundtrap', url: 'https://www.soundtrap.com', color: 'bg-rose-50' },
         ],
         outputs: [
-            { id: 'out-1', name: '工作導航儀', url: '#', icon: 'navigation', bgColor: 'bg-stone-800 text-white' },
-            { id: 'out-2', name: '我的 Web CV', url: 'https://my-project-topaz-tau.vercel.app/', icon: 'user-circle', bgColor: 'bg-white border-stone-200 text-stone-700' },
+            { id: 'out-1', name: '工作導航儀', desc: 'Current Workspace', url: 'https://petitns-space.github.io/workspace-navigator/', color: 'bg-stone-800' },
+            { id: 'out-2', name: '我的 Web CV', desc: 'Personal Profile', url: 'https://my-project-topaz-tau.vercel.app/', color: 'bg-white' },
         ]
     };
 
@@ -74,6 +75,16 @@ const App = () => {
     const mediaRef = useRef(null);
     const outputsRef = useRef(null);
 
+    // 抓取品牌圖示的輔助函式 (Google Favicon Service)
+    const getLogo = (url) => {
+        try {
+            const domain = new URL(url).hostname;
+            return `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+        } catch (e) {
+            return `https://www.google.com/s2/favicons?sz=64&domain=google.com`;
+        }
+    };
+
     const syncToFirebase = (ai, wf, md, out) => {
         db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({
             ai, workflow: wf, media: md, outputs: out,
@@ -83,9 +94,7 @@ const App = () => {
 
     const scrollToSection = (id) => {
         const element = document.getElementById(id);
-        if (element) {
-            window.scrollTo({ top: element.offsetTop - 100, behavior: 'smooth' });
-        }
+        if (element) window.scrollTo({ top: element.offsetTop - 100, behavior: 'smooth' });
     };
 
     useEffect(() => {
@@ -103,10 +112,11 @@ const App = () => {
         return () => clearInterval(timer);
     }, []);
 
+    // 初始化拖拽功能 (長按 200ms 保護)
     useEffect(() => {
         if (loading) return;
         const config = { animation: 200, delay: 200, delayOnTouchOnly: true, ghostClass: 'sortable-ghost' };
-        const init = (ref, type, setFunc) => {
+        const init = (ref, setFunc) => {
             if (!ref.current) return;
             Sortable.create(ref.current, {
                 ...config,
@@ -120,20 +130,20 @@ const App = () => {
                 }
             });
         };
-        init(aiRef, 'ai', setAiTools);
-        init(workflowRef, 'wf', setWorkflowTools);
-        init(mediaRef, 'md', setMediaTools);
-        init(outputsRef, 'out', setOutputs);
+        init(aiRef, setAiTools);
+        init(workflowRef, setWorkflowTools);
+        init(mediaRef, setMediaTools);
+        init(outputsRef, setOutputs);
     }, [loading, aiTools, workflowTools, mediaTools, outputs]);
 
-    useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [aiTools, workflowTools, mediaTools, outputs, loading]);
+    useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [loading]);
 
     const handleAdd = (type) => {
         const name = prompt("名稱:");
         const url = prompt("網址:");
         if (!name || !url) return;
-        const newTool = { id: Date.now().toString(), name, url, icon: "link", bgColor: "bg-white border-stone-200 text-stone-600" };
-        if (type === 'ai') setAiTools(p => [...p, { ...newTool, color: "bg-white text-stone-600 border-stone-200", desc: "Custom" }]);
+        const newTool = { id: Date.now().toString(), name, url, color: "bg-white", desc: "Tool" };
+        if (type === 'ai') setAiTools(p => [...p, newTool]);
         if (type === 'wf') setWorkflowTools(p => [...p, newTool]);
         if (type === 'md') setMediaTools(p => [...p, newTool]);
         if (type === 'out') setOutputs(p => [...p, newTool]);
@@ -150,7 +160,23 @@ const App = () => {
         setTimeout(() => syncToFirebase(aiTools, workflowTools, mediaTools, outputs), 100);
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">PREPARING STUDIO...</div>;
+    // 按鈕組件：統一排版設計
+    const ToolButton = ({ tool, type, isMainOutput = false }) => (
+        <div data-id={tool.id} className="group relative bg-white border border-stone-200 rounded-2xl p-3 hover:shadow-xl transition-all cursor-grab active:cursor-grabbing">
+            <button onClick={(e) => handleDelete(type, tool.id, e)} className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center z-20 shadow-lg"><i data-lucide="x" className="w-3 h-3"></i></button>
+            <a href={tool.url} target="_blank" className="flex items-center gap-3">
+                <div className={`w-10 h-10 shrink-0 rounded-xl ${tool.color} flex items-center justify-center border border-stone-100 shadow-sm overflow-hidden p-1.5`}>
+                    <img src={getLogo(tool.url)} alt={tool.name} className="w-full h-full object-contain" />
+                </div>
+                <div className="min-w-0">
+                    <h3 className="font-bold text-stone-800 text-sm truncate">{tool.name}</h3>
+                    <p className="text-[9px] text-stone-400 font-bold uppercase truncate">{tool.desc || 'Tool'}</p>
+                </div>
+            </a>
+        </div>
+    );
+
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">LOADING STUDIO...</div>;
 
     return (
         <div className="min-h-screen bg-[#FDFCF5]">
@@ -158,7 +184,7 @@ const App = () => {
                 <div className="max-w-[1600px] mx-auto px-8 py-4 flex justify-between items-center">
                     <div className="flex items-center space-x-10">
                         <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.scrollTo({top:0, behavior:'smooth'})}>
-                            <div className="w-10 h-10 bg-stone-800 rounded-xl flex items-center justify-center text-white shadow-lg"><i data-lucide="zap" className="w-5 h-5"></i></div>
+                            <div className="w-10 h-10 bg-stone-800 rounded-xl flex items-center justify-center shadow-lg"><i data-lucide="zap" className="w-5 h-5 text-white"></i></div>
                             <h1 className="text-xl font-bold text-stone-700 tracking-tight hidden md:block">Studio Navigator</h1>
                         </div>
                         <nav className="flex space-x-8">
@@ -173,87 +199,49 @@ const App = () => {
                 </div>
             </header>
 
-            <main className="max-w-[1600px] mx-auto px-10 py-12 space-y-20">
+            <main className="max-w-[1600px] mx-auto px-10 py-12 space-y-16">
                 
-                {/* 1. AI Section - 窄版設計，文字在 Icon 旁 */}
+                {/* 1. AI Section */}
                 <section id="ai-sec" className="scroll-mt-28">
                     <div className="flex justify-between items-end mb-8 border-b border-stone-200 pb-4">
                         <h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="brain"></i> AI Intelligence</h2>
                         <button onClick={() => handleAdd('ai')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><i data-lucide="plus"></i></button>
                     </div>
                     <div ref={aiRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                        {aiTools.map(tool => (
-                            <div key={tool.id} data-id={tool.id} className="group relative bg-white border border-stone-200 rounded-2xl p-3 hover:shadow-xl transition-all cursor-grab active:cursor-grabbing">
-                                <button onClick={(e) => handleDelete('ai', tool.id, e)} className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center z-20"><i data-lucide="x" className="w-3 h-3"></i></button>
-                                <a href={tool.url} target="_blank" className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 shrink-0 rounded-xl ${tool.color} flex items-center justify-center border shadow-sm`}><i data-lucide={tool.icon} className="w-5 h-5"></i></div>
-                                    <div className="min-w-0">
-                                        <h3 className="font-bold text-stone-800 text-sm truncate">{tool.name}</h3>
-                                        <p className="text-[9px] text-stone-400 font-bold uppercase truncate">{tool.desc}</p>
-                                    </div>
-                                </a>
-                            </div>
-                        ))}
+                        {aiTools.map(tool => <ToolButton key={tool.id} tool={tool} type="ai" />)}
                     </div>
                 </section>
 
-                {/* 2. Workflow & Firebase */}
+                {/* 2. Workflow Automation */}
                 <section id="wf-sec" className="scroll-mt-28">
                     <div className="flex justify-between items-end mb-8 border-b border-stone-200 pb-4">
                         <h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="rocket"></i> Workflow Automation</h2>
                         <button onClick={() => handleAdd('wf')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><i data-lucide="plus"></i></button>
                     </div>
-                    <div ref={workflowRef} className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                        {workflowTools.map(tool => (
-                            <div key={tool.id} data-id={tool.id} className="group relative">
-                                <button onClick={(e) => handleDelete('wf', tool.id, e)} className="absolute -top-1 -right-1 z-20 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center"><i data-lucide="x" className="w-3 h-3"></i></button>
-                                <a href={tool.url} target="_blank" className={`flex flex-col items-center justify-center p-4 ${tool.bgColor} border border-stone-100 rounded-2xl hover:shadow-xl transition-all h-28 text-center group`}>
-                                    <i data-lucide={tool.icon} className="mb-2 w-6 h-6 group-hover:scale-110 transition-transform"></i>
-                                    <span className="text-[11px] font-black tracking-tighter text-stone-700">{tool.name}</span>
-                                </a>
-                            </div>
-                        ))}
+                    <div ref={workflowRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                        {workflowTools.map(tool => <ToolButton key={tool.id} tool={tool} type="wf" />)}
                     </div>
                 </section>
 
-                {/* 3. Media Section */}
+                {/* 3. Creative Media */}
                 <section id="md-sec" className="scroll-mt-28">
                     <div className="flex justify-between items-end mb-8 border-b border-stone-200 pb-4">
                         <h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="video"></i> Creative Media</h2>
                         <button onClick={() => handleAdd('md')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><i data-lucide="plus"></i></button>
                     </div>
-                    <div ref={mediaRef} className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                        {mediaTools.map(tool => (
-                            <div key={tool.id} data-id={tool.id} className="group relative">
-                                <button onClick={(e) => handleDelete('md', tool.id, e)} className="absolute -top-1 -right-1 z-20 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center"><i data-lucide="x" className="w-3 h-3"></i></button>
-                                <a href={tool.url} target="_blank" className={`flex flex-col items-center justify-center p-4 ${tool.bgColor} border border-stone-100 rounded-2xl hover:shadow-xl transition-all h-28 text-center group`}>
-                                    <i data-lucide={tool.icon} className="mb-2 w-6 h-6 group-hover:scale-110 transition-transform"></i>
-                                    <span className="text-[11px] font-black tracking-tighter text-stone-700">{tool.name}</span>
-                                </a>
-                            </div>
-                        ))}
+                    <div ref={mediaRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                        {mediaTools.map(tool => <ToolButton key={tool.id} tool={tool} type="md" />)}
                     </div>
                 </section>
 
-                {/* 4. 我的產出 Section - 新增區塊 */}
+                {/* 4. My Outputs */}
                 <section id="out-sec" className="scroll-mt-28">
                     <div className="flex justify-between items-end mb-8 border-b border-stone-200 pb-4">
                         <h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="folder-kanban"></i> My Outputs</h2>
                         <button onClick={() => handleAdd('out')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><i data-lucide="plus"></i></button>
                     </div>
-                    <div ref={outputsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {outputs.map(tool => (
-                            <div key={tool.id} data-id={tool.id} className="group relative bg-white border border-stone-200 rounded-[2rem] p-5 hover:shadow-2xl transition-all cursor-grab">
-                                <button onClick={(e) => handleDelete('out', tool.id, e)} className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-md z-20"><i data-lucide="x" className="w-4 h-4"></i></button>
-                                <a href={tool.url} target="_blank" className="flex items-center gap-5">
-                                    <div className={`w-14 h-14 rounded-2xl ${tool.bgColor} flex items-center justify-center border shadow-inner`}><i data-lucide={tool.icon} className="w-7 h-7"></i></div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-stone-800 text-lg leading-tight">{tool.name}</h3>
-                                        <p className="text-stone-400 text-[10px] font-bold uppercase mt-1 tracking-widest">View Project</p>
-                                    </div>
-                                </a>
-                            </div>
-                        ))}
+                    <div ref={outputsRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                        {outputs.map(tool => <ToolButton key={tool.id} tool={tool} type="out" />)}
                     </div>
                 </section>
 
