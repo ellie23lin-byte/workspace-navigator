@@ -1,4 +1,4 @@
-// 基於 V1 架構：更換 DOCUMENT_ID 以強制推送完整按鈕資料
+// 基於 V1 架構：比對補全法 (保留使用者排序，自動補足缺失按鈕)
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -16,85 +16,101 @@ try {
 
 const db = (typeof firebase !== 'undefined') ? firebase.firestore() : null;
 const COLLECTION_NAME = 'workspace_navigator_states';
-// 修改 ID 為 v20251222_force_reset 以確保完整按鈕重新載入
-const DOCUMENT_ID = 'user_tool_order_v20251222_force_reset';
+const DOCUMENT_ID = 'user_tool_order_v20251222'; // 回歸原本 ID
 
 const { useState, useEffect, useRef } = React;
 
 const App = () => {
     const [tools, setTools] = useState(null);
     const [currentTime, setCurrentTime] = useState(new Date());
-    
     const sectionOrder = ['ai', 'workflow', 'design', 'outputs', 'media'];
     const sectionRefs = {
         ai: useRef(null), workflow: useRef(null), design: useRef(null), outputs: useRef(null), media: useRef(null)
     };
 
+    // V1 完整預設清單
+    const defaultInitial = {
+        ai: [
+            { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800 text-white' },
+            { id: 'ai-2', name: 'Gemini', desc: 'Google AI', url: 'https://gemini.google.com', color: 'bg-blue-100' },
+            { id: 'ai-3', name: 'Gamma', desc: 'Presentation', url: 'https://gamma.app', color: 'bg-purple-100' },
+            { id: 'ai-4', name: 'NotebookLM', desc: 'Research', url: 'https://notebooklm.google.com', color: 'bg-teal-100' },
+            { id: 'ai-5', name: 'AI Studio', desc: 'Dev Tool', url: 'https://aistudio.google.com', color: 'bg-indigo-100' },
+            { id: 'ai-6', name: 'ChatGPT', desc: 'AI Chat', url: 'https://chat.openai.com', color: 'bg-emerald-100' },
+            { id: 'ai-7', name: 'Claude', desc: 'AI Writing', url: 'https://claude.ai', color: 'bg-orange-100' },
+            { id: 'ai-8', name: 'DeepL', desc: 'Translate', url: 'https://www.deepl.com', color: 'bg-blue-50' },
+            { id: 'ai-9', name: 'Perplexity', desc: 'AI Search', url: 'https://www.perplexity.ai', color: 'bg-cyan-100' },
+            { id: 'ai-10', name: 'Leonardo', desc: 'Art Gen', url: 'https://leonardo.ai', color: 'bg-amber-100' }
+        ],
+        workflow: [
+            { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', color: 'bg-rose-50' },
+            { id: 'wf-2', name: 'Make', url: 'https://www.make.com', color: 'bg-violet-50' },
+            { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', color: 'bg-slate-100' },
+            { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', color: 'bg-amber-50' },
+            { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', color: 'bg-blue-50' },
+            { id: 'wf-6', name: 'Wix', url: 'https://www.wix.com', color: 'bg-sky-50' },
+            { id: 'wf-7', name: 'GitHub', url: 'https://github.com', color: 'bg-gray-100' }
+        ],
+        design: [
+            { id: 'ds-1', name: 'Figma', url: 'https://www.figma.com', color: 'bg-orange-50' },
+            { id: 'ds-2', name: 'Spline', url: 'https://spline.design', color: 'bg-indigo-50' },
+            { id: 'ds-3', name: 'Pinterest', url: 'https://www.pinterest.com', color: 'bg-red-50' },
+            { id: 'ds-4', name: 'Dribbble', url: 'https://dribbble.com', color: 'bg-pink-50' },
+            { id: 'ds-5', name: 'Behance', url: 'https://www.behance.net', color: 'bg-blue-50' },
+            { id: 'ds-6', name: 'Coolors', url: 'https://coolors.co', color: 'bg-teal-50' },
+            { id: 'ds-7', name: 'Adobe Color', url: 'https://color.adobe.com', color: 'bg-yellow-50' },
+            { id: 'ds-8', name: 'Fontjoy', url: 'https://fontjoy.com', color: 'bg-lime-50' },
+            { id: 'ds-9', name: 'Google Fonts', url: 'https://fonts.google.com', color: 'bg-green-50' },
+            { id: 'ds-10', name: 'Lucide', url: 'https://lucide.dev', color: 'bg-cyan-50' }
+        ],
+        outputs: [
+            { id: 'out-cv', name: '我的CV', desc: 'Personal Resume', url: 'https://my-project-topaz-tau.vercel.app/', color: 'bg-rose-100' }
+        ],
+        media: [
+            { id: 'md-1', name: 'Midjourney', url: 'https://www.midjourney.com', color: 'bg-violet-100' },
+            { id: 'md-2', name: 'Runway', url: 'https://runwayml.com', color: 'bg-pink-100' },
+            { id: 'md-3', name: 'Pika', url: 'https://pika.art', color: 'bg-fuchsia-100' },
+            { id: 'md-4', name: 'Luma', url: 'https://lumalabs.ai', color: 'bg-purple-100' },
+            { id: 'md-5', name: 'Krea', url: 'https://www.krea.ai', color: 'bg-sky-100' },
+            { id: 'md-6', name: 'Unsplash', url: 'https://unsplash.com', color: 'bg-slate-100' },
+            { id: 'md-7', name: 'Freepik', url: 'https://www.freepik.com', color: 'bg-cyan-100' },
+            { id: 'md-8', name: 'Icons8', url: 'https://icons8.com', color: 'bg-emerald-100' },
+            { id: 'md-9', name: 'Envato Elements', url: 'https://elements.envato.com', color: 'bg-lime-100' },
+            { id: 'md-10', name: 'YouTube', url: 'https://youtube.com', color: 'bg-red-100' }
+        ]
+    };
+
     useEffect(() => {
-        const loadData = async () => {
+        const loadAndMerge = async () => {
             if (!db) return;
             try {
                 const doc = await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get();
                 if (doc.exists) {
-                    setTools(doc.data());
+                    const cloudData = doc.data();
+                    const mergedData = {};
+                    
+                    // 智能比對：保留雲端順序，補足缺失按鈕
+                    sectionOrder.forEach(key => {
+                        const cloudList = cloudData[key] || [];
+                        const defaultList = defaultInitial[key] || [];
+                        
+                        // 找出預設清單中有，但雲端清單中沒有的 ID
+                        const cloudIds = new Set(cloudList.map(item => item.id));
+                        const missingItems = defaultList.filter(item => !cloudIds.has(item.id));
+                        
+                        mergedData[key] = [...cloudList, ...missingItems];
+                    });
+                    
+                    setTools(mergedData);
+                    // 只有在有變動時才寫回雲端，避免無限更新
+                    db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(mergedData);
                 } else {
-                    // 這裡包含 V1 鎖定的 37 個工具
-                    const initial = {
-                        ai: [
-                            { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800 text-white' },
-                            { id: 'ai-2', name: 'Gemini', desc: 'Google AI', url: 'https://gemini.google.com', color: 'bg-blue-100' },
-                            { id: 'ai-3', name: 'Gamma', desc: 'Presentation', url: 'https://gamma.app', color: 'bg-purple-100' },
-                            { id: 'ai-4', name: 'NotebookLM', desc: 'Research', url: 'https://notebooklm.google.com', color: 'bg-teal-100' },
-                            { id: 'ai-5', name: 'AI Studio', desc: 'Dev Tool', url: 'https://aistudio.google.com', color: 'bg-indigo-100' },
-                            { id: 'ai-6', name: 'ChatGPT', desc: 'AI Chat', url: 'https://chat.openai.com', color: 'bg-emerald-100' },
-                            { id: 'ai-7', name: 'Claude', desc: 'AI Writing', url: 'https://claude.ai', color: 'bg-orange-100' },
-                            { id: 'ai-8', name: 'DeepL', desc: 'Translate', url: 'https://www.deepl.com', color: 'bg-blue-50' },
-                            { id: 'ai-9', name: 'Perplexity', desc: 'AI Search', url: 'https://www.perplexity.ai', color: 'bg-cyan-100' },
-                            { id: 'ai-10', name: 'Leonardo', desc: 'Art Gen', url: 'https://leonardo.ai', color: 'bg-amber-100' }
-                        ],
-                        workflow: [
-                            { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', color: 'bg-rose-50' },
-                            { id: 'wf-2', name: 'Make', url: 'https://www.make.com', color: 'bg-violet-50' },
-                            { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', color: 'bg-slate-100' },
-                            { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', color: 'bg-amber-50' },
-                            { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', color: 'bg-blue-50' },
-                            { id: 'wf-6', name: 'Wix', url: 'https://www.wix.com', color: 'bg-sky-50' },
-                            { id: 'wf-7', name: 'GitHub', url: 'https://github.com', color: 'bg-gray-100' }
-                        ],
-                        design: [
-                            { id: 'ds-1', name: 'Figma', url: 'https://www.figma.com', color: 'bg-orange-50' },
-                            { id: 'ds-2', name: 'Spline', url: 'https://spline.design', color: 'bg-indigo-50' },
-                            { id: 'ds-3', name: 'Pinterest', url: 'https://www.pinterest.com', color: 'bg-red-50' },
-                            { id: 'ds-4', name: 'Dribbble', url: 'https://dribbble.com', color: 'bg-pink-50' },
-                            { id: 'ds-5', name: 'Behance', url: 'https://www.behance.net', color: 'bg-blue-50' },
-                            { id: 'ds-6', name: 'Coolors', url: 'https://coolors.co', color: 'bg-teal-50' },
-                            { id: 'ds-7', name: 'Adobe Color', url: 'https://color.adobe.com', color: 'bg-yellow-50' },
-                            { id: 'ds-8', name: 'Fontjoy', url: 'https://fontjoy.com', color: 'bg-lime-50' },
-                            { id: 'ds-9', name: 'Google Fonts', url: 'https://fonts.google.com', color: 'bg-green-50' },
-                            { id: 'ds-10', name: 'Lucide', url: 'https://lucide.dev', color: 'bg-cyan-50' }
-                        ],
-                        outputs: [
-                            { id: 'out-cv', name: '我的CV', desc: 'Personal Resume', url: 'https://my-project-topaz-tau.vercel.app/', color: 'bg-rose-100' }
-                        ],
-                        media: [
-                            { id: 'md-1', name: 'Midjourney', url: 'https://www.midjourney.com', color: 'bg-violet-100' },
-                            { id: 'md-2', name: 'Runway', url: 'https://runwayml.com', color: 'bg-pink-100' },
-                            { id: 'md-3', name: 'Pika', url: 'https://pika.art', color: 'bg-fuchsia-100' },
-                            { id: 'md-4', name: 'Luma', url: 'https://lumalabs.ai', color: 'bg-purple-100' },
-                            { id: 'md-5', name: 'Krea', url: 'https://www.krea.ai', color: 'bg-sky-100' },
-                            { id: 'md-6', name: 'Unsplash', url: 'https://unsplash.com', color: 'bg-slate-100' },
-                            { id: 'md-7', name: 'Freepik', url: 'https://www.freepik.com', color: 'bg-cyan-100' },
-                            { id: 'md-8', name: 'Icons8', url: 'https://icons8.com', color: 'bg-emerald-100' },
-                            { id: 'md-9', name: 'Envato Elements', url: 'https://elements.envato.com', color: 'bg-lime-100' },
-                            { id: 'md-10', name: 'YouTube', url: 'https://youtube.com', color: 'bg-red-100' }
-                        ]
-                    };
-                    setTools(initial);
-                    await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(initial);
+                    setTools(defaultInitial);
+                    await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(defaultInitial);
                 }
             } catch (err) { console.error("Load Data Fail", err); }
         };
-        loadData();
+        loadAndMerge();
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
@@ -120,7 +136,7 @@ const App = () => {
             });
             if (window.lucide) lucide.createIcons();
         };
-        setTimeout(initSortable, 300); // 增加一點延遲確保渲染完成
+        setTimeout(initSortable, 300);
     }, [tools]);
 
     const handleAdd = (type) => {
@@ -142,14 +158,11 @@ const App = () => {
     };
 
     const getFavicon = (url) => {
-        try {
-            return `https://www.google.com/s2/favicons?sz=64&domain=${new URL(url).hostname}`;
-        } catch (e) {
-            return "https://www.google.com/s2/favicons?sz=64&domain=google.com";
-        }
+        try { return `https://www.google.com/s2/favicons?sz=64&domain=${new URL(url).hostname}`; } 
+        catch (e) { return "https://www.google.com/s2/favicons?sz=64&domain=google.com"; }
     };
 
-    if (!tools) return <div className="p-10 text-stone-400 font-mono bg-[#FDFCF5] min-h-screen">FORCING FULL RESET...</div>;
+    if (!tools) return <div className="p-10 text-stone-400 font-mono bg-[#FDFCF5] min-h-screen">SYNCING WORKSPACE...</div>;
 
     return (
         <div className="min-h-screen pb-20 bg-[#FDFCF5]">
