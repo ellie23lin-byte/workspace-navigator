@@ -1,4 +1,6 @@
+// ==========================================
 // 1. Firebase 配置
+// ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -8,306 +10,253 @@ const firebaseConfig = {
     appId: "1:219057281896:web:63304825302437231754dd"
 };
 
-// 2. 初始化 Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+// 初始化 Firebase
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-db.settings({ experimentalForceLongPolling: true });
 
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v3';
+const DOCUMENT_ID = 'user_tool_order_v3_combined'; // 使用新 ID 確保數據結構乾淨
 
 const { useState, useEffect, useRef } = React;
 
-// 3. 預設工具清單 (靜態常數)
+// ==========================================
+// 2. 預設資料 (包含 Design Resources)
+// ==========================================
 const initialData = {
     ai: [
-        { id: 'ai-1', name: 'Manus', desc: '通用型 AI Agent 代理人', icon: 'bot', url: 'https://manus.ai', color: 'bg-stone-800 text-white border-stone-900' },
-        { id: 'ai-2', name: 'Gemini', desc: 'Google 多模態核心模型', icon: 'sparkles', url: 'https://gemini.google.com', color: 'bg-blue-100 text-blue-600 border-blue-200' },
-        { id: 'ai-3', name: 'Gamma', desc: 'AI 簡報、網頁、文件生成', icon: 'presentation', url: 'https://gamma.app', color: 'bg-purple-100 text-purple-600 border-purple-200' },
-        { id: 'ai-4', name: 'NotebookLM', desc: 'AI 智慧筆記與文獻分析', icon: 'book-open', url: 'https://notebooklm.google.com', color: 'bg-teal-100 text-teal-600 border-teal-200' },
-        { id: 'ai-5', name: 'AI Studio', desc: 'Google AI 開發者工具', icon: 'terminal', url: 'https://aistudio.google.com', color: 'bg-indigo-100 text-indigo-600 border-indigo-200' },
-        { id: 'ai-6', name: 'ChatGPT', desc: '全能對話生產力助手', icon: 'message-square', url: 'https://chat.openai.com', color: 'bg-emerald-100 text-emerald-600 border-emerald-200' },
-        { id: 'ai-7', name: 'Claude', desc: '精準文案與邏輯推理', icon: 'brain-circuit', url: 'https://claude.ai', color: 'bg-orange-100 text-orange-600 border-orange-200' },
-        { id: 'ai-8', name: 'DeepL', desc: '全球最精準的 AI 翻譯', icon: 'languages', url: 'https://www.deepl.com', color: 'bg-blue-50 text-blue-800 border-blue-100' },
-        { id: 'ai-9', name: 'Perplexity', desc: 'AI 驅動的知識搜尋引擎', icon: 'zap', url: 'https://www.perplexity.ai', color: 'bg-cyan-100 text-cyan-600 border-cyan-200' },
-        { id: 'ai-10', name: 'Leonardo', desc: '創意影像生成與畫質提升', icon: 'image', url: 'https://leonardo.ai', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+        { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800 text-white' },
+        { id: 'ai-2', name: 'Gemini', desc: 'Google AI', url: 'https://gemini.google.com', color: 'bg-blue-50 text-blue-600' },
+        { id: 'ai-6', name: 'ChatGPT', desc: 'OpenAI', url: 'https://chat.openai.com', color: 'bg-emerald-50 text-emerald-600' }
     ],
     workflow: [
-        { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', icon: 'infinity', bgColor: 'bg-rose-50 border-rose-100 text-rose-600' },
-        { id: 'wf-2', name: 'Make', url: 'https://www.make.com', icon: 'zap', bgColor: 'bg-violet-50 border-violet-100 text-violet-600' },
-        { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', icon: 'layout', bgColor: 'bg-slate-100 border-slate-200 text-slate-700' },
-        { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', icon: 'file-code', bgColor: 'bg-amber-50 border-amber-100 text-amber-600' },
-        { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', icon: 'monitor', bgColor: 'bg-blue-50 border-blue-100 text-blue-600' },
-        { id: 'wf-6', name: 'Wix', url: 'https://www.wix.com', icon: 'globe', bgColor: 'bg-sky-50 border-sky-100 text-sky-600' },
-        { id: 'wf-7', name: 'GitHub', url: 'https://github.com', icon: 'github', bgColor: 'bg-gray-100 border-gray-200 text-gray-800' }
+        { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', color: 'bg-rose-50 text-rose-600' },
+        { id: 'wf-2', name: 'Make', url: 'https://www.make.com', color: 'bg-violet-50 text-violet-600' },
+        { id: 'wf-7', name: 'GitHub', url: 'https://github.com', color: 'bg-gray-50 text-gray-800' }
     ],
     design: [
-        { id: 'ds-1', name: 'Figma', url: 'https://www.figma.com', icon: 'figma', bgColor: 'bg-orange-50 border-orange-100 text-orange-500' },
-        { id: 'ds-2', name: 'Spline', url: 'https://spline.design', icon: 'cube', bgColor: 'bg-indigo-50 border-indigo-100 text-indigo-500' },
-        { id: 'ds-3', name: 'Pinterest', url: 'https://www.pinterest.com', icon: 'pinterest', bgColor: 'bg-red-50 border-red-100 text-red-500' },
-        { id: 'ds-4', name: 'Dribbble', url: 'https://dribbble.com', icon: 'dribbble', bgColor: 'bg-pink-50 border-pink-100 text-pink-500' },
-        { id: 'ds-5', name: 'Behance', url: 'https://www.behance.net', icon: 'behance', bgColor: 'bg-blue-50 border-blue-100 text-blue-500' },
-        { id: 'ds-6', name: 'Coolors', url: 'https://coolors.co', icon: 'palette', bgColor: 'bg-teal-50 border-teal-100 text-teal-500' },
-        { id: 'ds-7', name: 'Adobe Color', url: 'https://color.adobe.com', icon: 'swatch-book', bgColor: 'bg-yellow-50 border-yellow-100 text-yellow-600' },
-        { id: 'ds-8', name: 'Fontjoy', url: 'https://fontjoy.com', icon: 'type', bgColor: 'bg-lime-50 border-lime-100 text-lime-600' },
-        { id: 'ds-9', name: 'Google Fonts', url: 'https://fonts.google.com', icon: 'pilcrow', bgColor: 'bg-green-50 border-green-100 text-green-600' },
-        { id: 'ds-10', name: 'Lucide', url: 'https://lucide.dev', icon: 'sparkles', bgColor: 'bg-cyan-50 border-cyan-100 text-cyan-600' }
+        { id: 'ds-1', name: 'Figma', url: 'https://www.figma.com', desc: 'UI Design', color: 'bg-orange-50 text-orange-500' },
+        { id: 'ds-2', name: 'Spline', url: 'https://spline.design', desc: '3D Web Design', color: 'bg-indigo-50 text-indigo-500' },
+        { id: 'ds-10', name: 'Lucide', url: 'https://lucide.dev', desc: 'Icon Library', color: 'bg-cyan-50 text-cyan-600' }
     ],
     media: [
-        { id: 'md-1', name: 'Midjourney', url: 'https://www.midjourney.com', icon: 'image', bgColor: 'bg-violet-100 border-violet-200 text-violet-700' },
-        { id: 'md-2', name: 'Runway', url: 'https://runwayml.com', icon: 'video', bgColor: 'bg-pink-100 border-pink-200 text-pink-700' },
-        { id: 'md-3', name: 'Pika', url: 'https://pika.art', icon: 'film', bgColor: 'bg-fuchsia-100 border-fuchsia-200 text-fuchsia-700' },
-        { id: 'md-4', name: 'Luma', url: 'https://lumalabs.ai', icon: 'camera', bgColor: 'bg-purple-100 border-purple-200 text-purple-700' },
-        { id: 'md-5', name: 'Krea', url: 'https://www.krea.ai', icon: 'wand-2', bgColor: 'bg-sky-100 border-sky-200 text-sky-700' },
-        { id: 'md-6', name: 'Unsplash', url: 'https://unsplash.com', icon: 'camera', bgColor: 'bg-slate-100 border-slate-200 text-slate-700' },
-        { id: 'md-7', name: 'Freepik', url: 'https://www.freepik.com', icon: 'layout-grid', bgColor: 'bg-cyan-100 border-cyan-200 text-cyan-700' },
-        { id: 'md-8', name: 'Icons8', url: 'https://icons8.com', icon: 'mouse-pointer-2', bgColor: 'bg-emerald-100 border-emerald-200 text-emerald-700' },
-        { id: 'md-9', name: 'Envato Elements', url: 'https://elements.envato.com', icon: 'folder-search', bgColor: 'bg-lime-100 border-lime-200 text-lime-700' },
-        { id: 'md-10', name: 'YouTube', url: 'https://youtube.com', icon: 'youtube', bgColor: 'bg-red-100 border-red-200 text-red-700' }
+        { id: 'md-1', name: 'Midjourney', url: 'https://www.midjourney.com', desc: 'AI Image', color: 'bg-violet-50 text-violet-700' },
+        { id: 'md-10', name: 'YouTube', url: 'https://youtube.com', desc: 'Video Platform', color: 'bg-red-50 text-red-700' }
     ]
 };
 
-// 4. React App 元件
-const App = ( ) => {
+// ==========================================
+// 3. React App 主程式
+// ==========================================
+const App = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [loading, setLoading] = useState(true);
     const [tools, setTools] = useState(null);
     const [order, setOrder] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
 
-    const toolsRef = useRef(tools);
-    const orderRef = useRef(order);
+    const toolsRef = useRef(null);
+    const orderRef = useRef(null);
+    const sortableInstances = useRef([]);
 
-    // 同步 Ref 和 State
+    // 自動獲取 Favicon Logo
+    const getLogo = (url) => {
+        try {
+            const domain = new URL(url).hostname;
+            return `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+        } catch (e) { return `https://www.google.com/s2/favicons?sz=64&domain=google.com`; }
+    };
+
+    // 同步 Ref 以解決 Sortable 閉包問題
     useEffect(() => {
         toolsRef.current = tools;
         orderRef.current = order;
     }, [tools, order]);
 
-    // 時間更新 effect
+    // 初始化：載入時間與 Firebase 資料
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        
+        db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get().then(doc => {
+            if (doc.exists && doc.data().tools) {
+                setTools(doc.data().tools);
+                setOrder(doc.data().order);
+            } else {
+                setTools(initialData);
+                setOrder(Object.keys(initialData));
+            }
+            setLoading(false);
+        }).catch(err => {
+            console.error("Firebase Error:", err);
+            setTools(initialData);
+            setOrder(Object.keys(initialData));
+            setLoading(false);
+        });
+
         return () => clearInterval(timer);
     }, []);
 
-    // 資料載入 effect
+    // 保存資料到 Firebase
+    const saveState = (newTools, newOrder) => {
+        db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({
+            tools: newTools,
+            order: newOrder,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(e => console.error("Save error:", e));
+    };
+
+    // 初始化拖拽功能 (SortableJS)
     useEffect(() => {
-        const loadingTimeout = setTimeout(() => {
-            if (loading) {
-                setTools(initialData);
-                setOrder(Object.keys(initialData));
-                setLoading(false);
-            }
-        }, 5000);
+        if (loading || !order) return;
 
-        const unsubscribe = db.collection(COLLECTION_NAME).doc(DOCUMENT_ID)
-            .onSnapshot(doc => {
-                clearTimeout(loadingTimeout);
-                if (doc.exists) {
-                    const data = doc.data();
-                    if (data && data.tools && data.order && Array.isArray(data.order)) {
-                        setTools(data.tools);
-                        setOrder(data.order);
-                    } else {
-                        setTools(initialData);
-                        setOrder(Object.keys(initialData));
-                    }
-                } else {
-                    setTools(initialData);
-                    setOrder(Object.keys(initialData));
-                }
-                setLoading(false);
-            }, err => {
-                clearTimeout(loadingTimeout);
-                setTools(initialData);
-                setOrder(Object.keys(initialData));
-                setLoading(false);
-            });
+        // 清除舊的實例，防止記憶體洩漏
+        sortableInstances.current.forEach(i => i.destroy());
+        sortableInstances.current = [];
 
-        return () => {
-            unsubscribe();
-            clearTimeout(loadingTimeout);
-        };
-    }, []);
-
-    // Sortable.js 初始化 effect (***核心修正***)
-    useEffect(() => {
-        if (loading || !order) {
-            return;
-        }
-
-        const sortableInstances = {};
-
-        // 主容器排序
-        const mainContainer = document.getElementById('main-container');
-        if (mainContainer) {
-            sortableInstances.main = new Sortable(mainContainer, {
-                animation: 150,
+        // 1. 主容器排序 (區塊排序)
+        const mainEl = document.getElementById('main-container');
+        if (mainEl) {
+            const ins = Sortable.create(mainEl, {
+                animation: 200, 
                 handle: '.drag-handle',
                 onEnd: (evt) => {
-                    const newOrder = [...orderRef.current];
-                    const [movedItem] = newOrder.splice(evt.oldIndex, 1);
-                    newOrder.splice(evt.newIndex, 0, movedItem);
+                    const { oldIndex, newIndex, item, from } = evt;
+                    if (oldIndex === newIndex) return;
                     
-                    // 直接更新 state，觸發 React 重新渲染
+                    // 【核心修復】手動將 DOM 移回原位，讓 React 接手渲染
+                    const children = Array.from(from.children);
+                    if (oldIndex < newIndex) from.insertBefore(item, children[oldIndex]);
+                    else from.insertBefore(item, children[oldIndex].nextSibling || null);
+
+                    const newOrder = [...orderRef.current];
+                    const [moved] = newOrder.splice(oldIndex, 1);
+                    newOrder.splice(newIndex, 0, moved);
+                    
                     setOrder(newOrder);
-                    // 使用 Ref 中的 tools 進行保存，避免閉包問題
-                    saveState({ order: newOrder, tools: toolsRef.current });
+                    saveState(toolsRef.current, newOrder);
                 }
             });
+            sortableInstances.current.push(ins);
         }
 
-        // 分類內部工具排序
+        // 2. 工具網格排序 (分類內部的工具)
         order.forEach(type => {
-            const el = document.getElementById(`tool-grid-${type}`);
-            if (el) {
-                sortableInstances[type] = new Sortable(el, {
-                    group: 'tools',
-                    animation: 150,
-                    onEnd: (evt) => {
-                        const { from, to, oldIndex, newIndex } = evt;
-                        const fromType = from.id.replace('tool-grid-', '');
-                        const toType = to.id.replace('tool-grid-', '');
-                        
-                        // 從 Ref 取得最新的 tools state
-                        const newTools = JSON.parse(JSON.stringify(toolsRef.current));
-                        const [movedItem] = newTools[fromType].splice(oldIndex, 1);
-                        newTools[toType].splice(newIndex, 0, movedItem);
-                        
-                        // 直接更新 state
-                        setTools(newTools);
-                        // 使用 Ref 中的 order 進行保存
-                        saveState({ order: orderRef.current, tools: newTools });
-                    }
-                });
-            }
+            const el = document.getElementById(`grid-${type}`);
+            if (!el) return;
+            const ins = Sortable.create(el, {
+                animation: 200, 
+                delay: 50,
+                onEnd: (evt) => {
+                    const { oldIndex, newIndex, item, from } = evt;
+                    if (oldIndex === newIndex) return;
+
+                    // 【核心修復】DOM 復位機制
+                    const children = Array.from(from.children);
+                    if (oldIndex < newIndex) from.insertBefore(item, children[oldIndex]);
+                    else from.insertBefore(item, children[oldIndex].nextSibling || null);
+
+                    const newTools = JSON.parse(JSON.stringify(toolsRef.current));
+                    const [moved] = newTools[type].splice(oldIndex, 1);
+                    newTools[type].splice(newIndex, 0, moved);
+
+                    setTools(newTools);
+                    saveState(newTools, orderRef.current);
+                }
+            });
+            sortableInstances.current.push(ins);
         });
 
-        return () => {
-            Object.values(sortableInstances).forEach(instance => instance && instance.destroy());
-        };
-    }, [loading, order]); // ***依賴項只保留 loading 和 order***
+        return () => sortableInstances.current.forEach(i => i.destroy());
+    }, [loading, order]);
 
-    // Lucide 圖標更新 effect
-    useEffect(() => {
-        if (!loading) {
-            lucide.createIcons();
-        }
-    }, [loading, tools, isEditing]);
+    // 更新圖標
+    useEffect(() => { 
+        if (!loading && typeof lucide !== 'undefined') lucide.createIcons(); 
+    }, [loading, tools, isEditing, order]);
 
-    const saveState = (newState) => {
-        db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(newState)
-            .catch(error => console.error("Error writing to Firebase: ", error));
-    };
-
+    // 刪除工具
     const handleDelete = (type, id, e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (window.confirm('確定要刪除這個工具嗎？')) {
-            const newTools = { ...tools };
-            newTools[type] = newTools[type].filter(tool => tool.id !== id);
-            setTools(newTools);
-            saveState({ order, tools: newTools });
-        }
+        e.preventDefault(); e.stopPropagation();
+        if (!confirm("確定要刪除這個工具嗎？")) return;
+        const newTools = { ...tools };
+        newTools[type] = newTools[type].filter(t => t.id !== id);
+        setTools(newTools);
+        saveState(newTools, order);
     };
 
-    const formatTime = (date) => {
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${hours}:${minutes}:${seconds}`;
-    };
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-stone-50 font-mono text-stone-400">
+            SYNCING WORKSPACE...
+        </div>
+    );
 
-    const formatDate = (date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const dayOfWeek = ['日', '一', '二', '三', '四', '五', '六'][date.getDay()];
-        return `${year}.${month}.${day} 星期${dayOfWeek}`;
-    };
+    return (
+        <div className="min-h-screen bg-[#FDFCF5] p-8 font-sans">
+            {/* Header */}
+            <header className="max-w-7xl mx-auto flex justify-between items-center mb-12">
+                <div>
+                    <h1 className="text-5xl font-black text-stone-800 tracking-tighter">
+                        {currentTime.toLocaleTimeString('zh-TW', { hour12: false })}
+                    </h1>
+                    <p className="text-stone-400 font-bold uppercase tracking-widest text-[10px] mt-2">
+                        {currentTime.toLocaleDateString('zh-TW')}
+                    </p>
+                </div>
+                <button 
+                    onClick={() => setIsEditing(!isEditing)}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all shadow-lg ${isEditing ? 'bg-orange-500 text-white' : 'bg-white text-stone-600 border border-stone-200'}`}
+                >
+                    <i data-lucide={isEditing ? 'check' : 'settings-2'} className="w-4 h-4"></i>
+                    {isEditing ? '完成管理' : '管理工具'}
+                </button>
+            </header>
 
-    if (loading || !tools || !order) {
-        return React.createElement('div', { className: 'flex items-center justify-center h-screen bg-slate-900 text-white text-xl' },
-            React.createElement('i', { 'data-lucide': 'loader-circle', className: 'w-8 h-8 mr-4 animate-spin' }),
-            'Loading Workspace...'
-        );
-    }
+            {/* Main Content */}
+            <main id="main-container" className="max-w-7xl mx-auto space-y-12 pb-20">
+                {order.map(type => (
+                    <section key={type} className="relative group/sec bg-white/30 p-6 rounded-3xl border border-transparent hover:border-stone-100 transition-all">
+                        {/* 區塊拖動把手 */}
+                        <div className="drag-handle absolute -left-4 top-8 opacity-0 group-hover/sec:opacity-100 transition-opacity cursor-grab p-2 text-stone-300 hover:text-stone-800">
+                            <i data-lucide="grip-vertical"></i>
+                        </div>
+                        
+                        <h2 className="text-[11px] font-black text-stone-400 uppercase tracking-[0.3em] mb-6">
+                            {
+                                type === 'ai' ? 'AI Intelligence' : 
+                                type === 'workflow' ? 'Workflow & Dev' : 
+                                type === 'design' ? 'Design Resources' : 'Media Assets'
+                            }
+                        </h2>
 
-    const renderTool = (tool, type) => {
-        const isSimple = ['workflow', 'design', 'media'].includes(type);
-        const commonProps = {
-            key: tool.id,
-            'data-id': tool.id,
-            className: "group relative cursor-grab"
-        };
-
-        const deleteButton = isEditing && React.createElement('button', {
-            onClick: (e) => handleDelete(type, tool.id, e),
-            className: "absolute -top-2 -right-2 z-20 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all hover:scale-110"
-        }, React.createElement('i', { 'data-lucide': 'x', className: 'w-4 h-4' }));
-
-        const linkClass = isSimple
-            ? `flex items-center justify-center p-4 h-full rounded-lg border transition-all group-hover:scale-105 group-hover:shadow-lg ${tool.bgColor}`
-            : `flex flex-col items-center p-3 text-center rounded-lg border transition-all group-hover:scale-105 group-hover:shadow-xl ${tool.color}`;
-
-        const linkContent = isSimple
-            ? [
-                React.createElement('i', { key: 'icon', 'data-lucide': tool.icon, className: 'w-6 h-6 mr-3' }),
-                React.createElement('span', { key: 'name', className: 'font-semibold' }, tool.name)
-            ]
-            : [
-                React.createElement('i', { key: 'icon', 'data-lucide': tool.icon, className: 'w-8 h-8 mb-2' }),
-                React.createElement('h3', { key: 'name', className: 'font-bold text-sm mb-1' }, tool.name),
-                React.createElement('p', { key: 'desc', className: 'text-xs opacity-70' }, tool.desc)
-            ];
-
-        return React.createElement('div', commonProps,
-            deleteButton,
-            React.createElement('a', { href: tool.url, target: '_blank', className: linkClass }, linkContent)
-        );
-    };
-
-    return React.createElement('div', { className: 'min-h-screen bg-slate-900 text-white p-4 md:p-8' },
-        React.createElement('header', { className: 'flex justify-between items-center mb-8' },
-            React.createElement('div', { className: 'text-left' },
-                React.createElement('h1', { className: 'text-5xl font-bold tracking-tighter' }, formatTime(currentTime)),
-                React.createElement('p', { className: 'text-slate-400' }, formatDate(currentTime))
-            ),
-            React.createElement('button', {
-                onClick: () => setIsEditing(!isEditing),
-                className: `px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${isEditing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-700 hover:bg-slate-600'}`
-            },
-                React.createElement('i', { 'data-lucide': isEditing ? 'check' : 'settings-2', className: 'w-4 h-4' }),
-                isEditing ? '完成管理' : '管理工具'
-            )
-        ),
-        React.createElement('main', { id: 'main-container', className: 'space-y-8' },
-            order.map(type => {
-                const category = tools[type];
-                if (!category || !Array.isArray(category)) return null;
-                const titleMap = { ai: 'AI Agents', workflow: 'Workflow & Dev', design: 'Design Resources', media: 'Media & Assets' };
-                const gridStyle = {
-                    ai: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
-                    workflow: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
-                    design: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
-                    media: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-                };
-
-                return React.createElement('section', { key: type, 'data-type': type, className: 'relative pt-4' },
-                    React.createElement('div', { className: 'drag-handle absolute -left-8 top-5 text-slate-500 cursor-move p-1' },
-                        React.createElement('i', { 'data-lucide': 'grip-vertical', className: 'w-5 h-5' })
-                    ),
-                    React.createElement('h2', { className: 'text-xl font-semibold mb-4 text-slate-300' }, titleMap[type]),
-                    React.createElement('div', { id: `tool-grid-${type}`, className: `grid gap-4 ${gridStyle[type]}` },
-                        category.map(tool => renderTool(tool, type))
-                    )
-                );
-            })
-        )
+                        <div id={`grid-${type}`} className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                            {tools[type] && tools[type].map(tool => (
+                                <div key={tool.id} data-id={tool.id} className="group relative bg-white border border-stone-100 rounded-2xl p-3 hover:shadow-xl transition-all cursor-grab active:scale-95">
+                                    {isEditing && (
+                                        <button 
+                                            onClick={(e) => handleDelete(type, tool.id, e)} 
+                                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center z-30 shadow-md hover:scale-110 transition-transform"
+                                        >
+                                            <i data-lucide="x" className="w-3 h-3"></i>
+                                        </button>
+                                    )}
+                                    <a href={tool.url} target="_blank" className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 flex-shrink-0 rounded-xl ${tool.color ? tool.color.split(' ')[0] : 'bg-stone-100'} flex items-center justify-center p-1.5 border border-stone-50`}>
+                                            <img src={getLogo(tool.url)} className="w-full h-full object-contain" alt="logo" loading="lazy" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h3 className="font-bold text-stone-800 text-sm truncate">{tool.name}</h3>
+                                            <p className="text-[9px] text-stone-400 font-bold uppercase truncate">{tool.desc || 'Tool'}</p>
+                                        </div>
+                                    </a>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                ))}
+            </main>
+        </div>
     );
 };
 
-// 5. 渲染 App
-ReactDOM.render(React.createElement(App), document.getElementById('root'));
+// 渲染到根節點
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
