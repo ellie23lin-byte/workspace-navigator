@@ -1,4 +1,4 @@
-// 基於 V1 架構：補回所有 37 個初始工具按鈕
+// 基於 V1 架構：更換 DOCUMENT_ID 以強制推送完整按鈕資料
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -16,7 +16,8 @@ try {
 
 const db = (typeof firebase !== 'undefined') ? firebase.firestore() : null;
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v20251222';
+// 修改 ID 為 v20251222_force_reset 以確保完整按鈕重新載入
+const DOCUMENT_ID = 'user_tool_order_v20251222_force_reset';
 
 const { useState, useEffect, useRef } = React;
 
@@ -24,7 +25,6 @@ const App = () => {
     const [tools, setTools] = useState(null);
     const [currentTime, setCurrentTime] = useState(new Date());
     
-    // V1 鎖定順序：AI -> Workflow -> Design -> 我的產出 -> Media
     const sectionOrder = ['ai', 'workflow', 'design', 'outputs', 'media'];
     const sectionRefs = {
         ai: useRef(null), workflow: useRef(null), design: useRef(null), outputs: useRef(null), media: useRef(null)
@@ -38,6 +38,7 @@ const App = () => {
                 if (doc.exists) {
                     setTools(doc.data());
                 } else {
+                    // 這裡包含 V1 鎖定的 37 個工具
                     const initial = {
                         ai: [
                             { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800 text-white' },
@@ -119,7 +120,7 @@ const App = () => {
             });
             if (window.lucide) lucide.createIcons();
         };
-        setTimeout(initSortable, 200);
+        setTimeout(initSortable, 300); // 增加一點延遲確保渲染完成
     }, [tools]);
 
     const handleAdd = (type) => {
@@ -142,14 +143,13 @@ const App = () => {
 
     const getFavicon = (url) => {
         try {
-            const hostname = new URL(url).hostname;
-            return `https://www.google.com/s2/favicons?sz=64&domain=${hostname}`;
+            return `https://www.google.com/s2/favicons?sz=64&domain=${new URL(url).hostname}`;
         } catch (e) {
             return "https://www.google.com/s2/favicons?sz=64&domain=google.com";
         }
     };
 
-    if (!tools) return <div className="p-10 text-stone-400 font-mono bg-[#FDFCF5] min-h-screen">RESTORING V1 FULL BUTTONS...</div>;
+    if (!tools) return <div className="p-10 text-stone-400 font-mono bg-[#FDFCF5] min-h-screen">FORCING FULL RESET...</div>;
 
     return (
         <div className="min-h-screen pb-20 bg-[#FDFCF5]">
