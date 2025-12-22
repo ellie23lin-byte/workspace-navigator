@@ -1,4 +1,4 @@
-// 1. Firebase 配置
+// 1. Firebase 配置 (保持不變)
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -13,7 +13,7 @@ const db = firebase.firestore();
 db.settings({ experimentalForceLongPolling: true });
 
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v17_final_v2'; 
+const DOCUMENT_ID = 'user_tool_order_v18_stable'; 
 
 const { useState, useEffect, useRef } = React;
 
@@ -35,6 +35,7 @@ const App = () => {
     
     const stateRef = useRef({ ai: [], workflow: [], media: [], outputs: [] });
 
+    // 完整的初始清單 (確保所有工具都在)
     const initialData = {
         ai: [
             { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800' },
@@ -112,37 +113,38 @@ const App = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // 關鍵修復：嚴格控制 Sortable 初始化與數據同步
+    // 關鍵修復：嚴格控制 Sortable 初始化
     useEffect(() => {
         if (loading) return;
-        const initSortable = (type) => {
+        const initSortable = (type, setFunc) => {
             const el = containerRefs[type].current;
             if (!el) return;
             Sortable.create(el, {
                 animation: 200, delay: 150, delayOnTouchOnly: true, ghostClass: 'sortable-ghost',
-                onUpdate: (evt) => {
+                onUpdate: () => {
                     const newIds = Array.from(el.children).map(child => child.dataset.id);
                     // 數據去重：確保 ID 唯一
                     const uniqueIds = [...new Set(newIds)];
                     const currentList = stateRef.current[type];
+                    // 根據新 ID 順序重建數組
                     const sortedList = uniqueIds.map(id => currentList.find(t => t.id === id)).filter(Boolean);
                     
-                    // 更新狀態
-                    if (type === 'ai') setAiTools(sortedList);
-                    else if (type === 'workflow') setWorkflowTools(sortedList);
-                    else if (type === 'media') setMediaTools(sortedList);
-                    else if (type === 'outputs') setOutputs(sortedList);
+                    // 立即更新狀態
+                    setFunc(sortedList);
 
-                    // 異步同步至 Firebase
+                    // 異步同步至 Firebase，加入延遲確保 React 渲染完成
                     setTimeout(() => {
                         const s = stateRef.current;
                         syncToFirebase(s.ai, s.workflow, s.media, s.outputs);
-                    }, 100);
+                    }, 500);
                 }
             });
         };
 
-        ['ai', 'workflow', 'media', 'outputs'].forEach(type => initSortable(type));
+        initSortable('ai', setAiTools);
+        initSortable('workflow', setWorkflowTools);
+        initSortable('media', setMediaTools);
+        initSortable('outputs', setOutputs);
     }, [loading]);
 
     useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [loading, aiTools, workflowTools, mediaTools, outputs]);
@@ -156,7 +158,7 @@ const App = () => {
         else if (type === 'wf') setWorkflowTools(p => [...p, newTool]);
         else if (type === 'md') setMediaTools(p => [...p, newTool]);
         else if (type === 'out') setOutputs(p => [...p, newTool]);
-        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 300);
+        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 500);
     };
 
     const handleDelete = (type, id, e) => {
@@ -166,7 +168,7 @@ const App = () => {
         else if (type === 'wf') setWorkflowTools(p => p.filter(t => t.id !== id));
         else if (type === 'md') setMediaTools(p => p.filter(t => t.id !== id));
         else if (type === 'out') setOutputs(p => p.filter(t => t.id !== id));
-        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 300);
+        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 500);
     };
 
     const ToolButton = ({ tool, type, useLucide = false }) => (
@@ -184,7 +186,7 @@ const App = () => {
         </div>
     );
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">STABILIZING SYSTEM...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400 animate-pulse">UPDATING SYSTEM...</div>;
 
     return (
         <div className="min-h-screen bg-[#FDFCF5]">
