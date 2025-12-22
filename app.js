@@ -1,4 +1,4 @@
-// 1. Firebase 配置 (保持不變)
+// 1. Firebase 配置 (加入 merge 選項優化)
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -10,10 +10,9 @@ const firebaseConfig = {
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-db.settings({ experimentalForceLongPolling: true });
 
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v18_stable'; 
+const DOCUMENT_ID = 'user_tool_order_v19_final'; 
 
 const { useState, useEffect, useRef } = React;
 
@@ -27,15 +26,12 @@ const App = () => {
     const [outputs, setOutputs] = useState([]);
 
     const containerRefs = {
-        ai: useRef(null),
-        workflow: useRef(null),
-        media: useRef(null),
-        outputs: useRef(null)
+        ai: useRef(null), workflow: useRef(null), media: useRef(null), outputs: useRef(null)
     };
     
+    // 用於內部邏輯的最新狀態 Ref
     const stateRef = useRef({ ai: [], workflow: [], media: [], outputs: [] });
 
-    // 完整的初始清單 (確保所有工具都在)
     const initialData = {
         ai: [
             { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800' },
@@ -92,7 +88,7 @@ const App = () => {
         db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({
             ai, workflow: wf, media: md, outputs: out,
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-        }).catch(err => console.error("Sync Error:", err));
+        }, { merge: true }).catch(err => console.error("Sync Error:", err));
     };
 
     useEffect(() => {
@@ -113,26 +109,40 @@ const App = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // 關鍵修復：嚴格控制 Sortable 初始化
+    // 關鍵修復：手動還原 DOM 以防止 React 崩潰
     useEffect(() => {
         if (loading) return;
-        const initSortable = (type, setFunc) => {
+        const init = (type, setFunc) => {
             const el = containerRefs[type].current;
             if (!el) return;
             Sortable.create(el, {
-                animation: 200, delay: 150, delayOnTouchOnly: true, ghostClass: 'sortable-ghost',
-                onUpdate: () => {
+                animation: 250, delay: 100, delayOnTouchOnly: true, ghostClass: 'sortable-ghost',
+                onEnd: (evt) => {
+                    // 1. 立即獲取真實的 DOM ID 順序
                     const newIds = Array.from(el.children).map(child => child.dataset.id);
-                    // 數據去重：確保 ID 唯一
-                    const uniqueIds = [...new Set(newIds)];
-                    const currentList = stateRef.current[type];
-                    // 根據新 ID 順序重建數組
-                    const sortedList = uniqueIds.map(id => currentList.find(t => t.id === id)).filter(Boolean);
                     
-                    // 立即更新狀態
-                    setFunc(sortedList);
+                    // 2. 重要：手動將移動過的 DOM 節點放回原來的位置
+                    // 這一步能防止 React 發現 DOM 結構改變而崩潰
+                    const { oldIndex, newIndex } = evt;
+                    if (newIndex === oldIndex) return;
+                    
+                    const children = Array.from(el.children);
+                    const movedItem = children[newIndex];
+                    el.removeChild(movedItem);
+                    if (oldIndex < children.length - 1) {
+                        el.insertBefore(movedItem, children[oldIndex > newIndex ? oldIndex : oldIndex + 1]);
+                    } else {
+                        el.appendChild(movedItem);
+                    }
 
-                    // 異步同步至 Firebase，加入延遲確保 React 渲染完成
+                    // 3. 根據排序後的 ID 重新計算數據
+                    const currentList = stateRef.current[type];
+                    const sortedList = newIds.map(id => currentList.find(t => t.id === id)).filter(Boolean);
+                    
+                    // 4. 更新狀態，由 React 決定何時重新渲染
+                    setFunc([...sortedList]);
+
+                    // 5. 同步 Firebase
                     setTimeout(() => {
                         const s = stateRef.current;
                         syncToFirebase(s.ai, s.workflow, s.media, s.outputs);
@@ -141,10 +151,9 @@ const App = () => {
             });
         };
 
-        initSortable('ai', setAiTools);
-        initSortable('workflow', setWorkflowTools);
-        initSortable('media', setMediaTools);
-        initSortable('outputs', setOutputs);
+        ['ai', 'workflow', 'media', 'outputs'].forEach(t => init(t, 
+            t === 'ai' ? setAiTools : t === 'workflow' ? setWorkflowTools : t === 'media' ? setMediaTools : setOutputs
+        ));
     }, [loading]);
 
     useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [loading, aiTools, workflowTools, mediaTools, outputs]);
@@ -153,12 +162,12 @@ const App = () => {
         const name = prompt("名稱:");
         const url = prompt("網址:");
         if (!name || !url) return;
-        const newTool = { id: Date.now().toString(), name, url, color: "bg-white", desc: "Tool", icon: "sparkles" };
+        const newTool = { id: Date.now().toString(), name, url, color: "bg-white", desc: "Custom Tool", icon: "link" };
         if (type === 'ai') setAiTools(p => [...p, newTool]);
         else if (type === 'wf') setWorkflowTools(p => [...p, newTool]);
         else if (type === 'md') setMediaTools(p => [...p, newTool]);
         else if (type === 'out') setOutputs(p => [...p, newTool]);
-        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 500);
+        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 300);
     };
 
     const handleDelete = (type, id, e) => {
@@ -168,7 +177,7 @@ const App = () => {
         else if (type === 'wf') setWorkflowTools(p => p.filter(t => t.id !== id));
         else if (type === 'md') setMediaTools(p => p.filter(t => t.id !== id));
         else if (type === 'out') setOutputs(p => p.filter(t => t.id !== id));
-        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 500);
+        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 300);
     };
 
     const ToolButton = ({ tool, type, useLucide = false }) => (
@@ -176,7 +185,7 @@ const App = () => {
             <button onClick={(e) => handleDelete(type, tool.id, e)} className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center z-20 shadow-lg"><i data-lucide="x" className="w-3 h-3"></i></button>
             <a href={tool.url} target="_blank" className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                 <div className={`w-10 h-10 shrink-0 rounded-xl ${tool.color} flex items-center justify-center border border-stone-100 shadow-sm overflow-hidden p-1.5`}>
-                    {useLucide ? <i data-lucide={tool.icon || 'sparkles'} className="w-5 h-5"></i> : <img src={getLogo(tool.url)} className="w-full h-full object-contain" />}
+                    {useLucide ? <i data-lucide={tool.icon || 'sparkles'} className="w-5 h-5"></i> : <img src={getLogo(tool.url)} className="w-full h-full object-contain text-[8px]" alt="logo" />}
                 </div>
                 <div className="min-w-0">
                     <h3 className="font-bold text-stone-800 text-sm truncate">{tool.name}</h3>
@@ -186,7 +195,7 @@ const App = () => {
         </div>
     );
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400 animate-pulse">UPDATING SYSTEM...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">LOADING NAVIGATOR...</div>;
 
     return (
         <div className="min-h-screen bg-[#FDFCF5]">
@@ -211,10 +220,10 @@ const App = () => {
                 <section id="ai-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="brain"></i> AI Intelligence</h2><button onClick={()=>handleAdd('ai')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
                     <div ref={containerRefs.ai} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{aiTools.map(t=><ToolButton key={t.id} tool={t} type="ai"/>)}</div>
                 </section>
-                <section id="wf-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="rocket"></i> Workflow Automation</h2><button onClick={()=>handleAdd('wf')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
+                <section id="wf-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="rocket"></i> Workflow</h2><button onClick={()=>handleAdd('wf')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
                     <div ref={containerRefs.workflow} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{workflowTools.map(t=><ToolButton key={t.id} tool={t} type="wf"/>)}</div>
                 </section>
-                <section id="md-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="video"></i> Creative Media</h2><button onClick={()=>handleAdd('md')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
+                <section id="md-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="video"></i> Creative</h2><button onClick={()=>handleAdd('md')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
                     <div ref={containerRefs.media} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{mediaTools.map(t=><ToolButton key={t.id} tool={t} type="md"/>)}</div>
                 </section>
                 <section id="out-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="folder-kanban"></i> My Outputs</h2><button onClick={()=>handleAdd('out')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
