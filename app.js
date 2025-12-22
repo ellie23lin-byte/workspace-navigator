@@ -1,4 +1,4 @@
-// 1. Firebase 配置 (加入 merge 選項優化)
+// 1. Firebase 初始化優化
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -8,11 +8,17 @@ const firebaseConfig = {
     appId: "1:219057281896:web:63304825302437231754dd"
 };
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    // 移除重複的 settings 設定以消除 Logger 警告
+} else {
+    firebase.app();
+}
 const db = firebase.firestore();
 
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v19_final'; 
+const DOCUMENT_ID = 'user_tool_order_v20_final'; 
 
 const { useState, useEffect, useRef } = React;
 
@@ -25,11 +31,11 @@ const App = () => {
     const [mediaTools, setMediaTools] = useState([]);
     const [outputs, setOutputs] = useState([]);
 
-    const containerRefs = {
+    const refs = {
         ai: useRef(null), workflow: useRef(null), media: useRef(null), outputs: useRef(null)
     };
     
-    // 用於內部邏輯的最新狀態 Ref
+    // 使用 Ref 確保在 Sortable 回調中能拿到最新的狀態
     const stateRef = useRef({ ai: [], workflow: [], media: [], outputs: [] });
 
     const initialData = {
@@ -88,7 +94,7 @@ const App = () => {
         db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({
             ai, workflow: wf, media: md, outputs: out,
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true }).catch(err => console.error("Sync Error:", err));
+        }, { merge: true }).catch(err => console.error("Firebase Sync Fail:", err));
     };
 
     useEffect(() => {
@@ -109,40 +115,35 @@ const App = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // 關鍵修復：手動還原 DOM 以防止 React 崩潰
+    // 核心解決方案：手動歸還 DOM 節點，讓 React 處理排序
     useEffect(() => {
         if (loading) return;
         const init = (type, setFunc) => {
-            const el = containerRefs[type].current;
+            const el = refs[type].current;
             if (!el) return;
             Sortable.create(el, {
-                animation: 250, delay: 100, delayOnTouchOnly: true, ghostClass: 'sortable-ghost',
+                animation: 200, delay: 100, delayOnTouchOnly: true,
                 onEnd: (evt) => {
-                    // 1. 立即獲取真實的 DOM ID 順序
-                    const newIds = Array.from(el.children).map(child => child.dataset.id);
-                    
-                    // 2. 重要：手動將移動過的 DOM 節點放回原來的位置
-                    // 這一步能防止 React 發現 DOM 結構改變而崩潰
-                    const { oldIndex, newIndex } = evt;
-                    if (newIndex === oldIndex) return;
-                    
-                    const children = Array.from(el.children);
-                    const movedItem = children[newIndex];
-                    el.removeChild(movedItem);
-                    if (oldIndex < children.length - 1) {
-                        el.insertBefore(movedItem, children[oldIndex > newIndex ? oldIndex : oldIndex + 1]);
+                    const { oldIndex, newIndex, item, from } = evt;
+                    if (oldIndex === newIndex) return;
+
+                    // 1. 強制將 DOM 節點移回原始位置 (關鍵：防止 React 崩潰)
+                    const children = Array.from(from.children);
+                    if (oldIndex < newIndex) {
+                        from.insertBefore(item, children[oldIndex]);
                     } else {
-                        el.appendChild(movedItem);
+                        from.insertBefore(item, children[oldIndex].nextSibling);
                     }
 
-                    // 3. 根據排序後的 ID 重新計算數據
-                    const currentList = stateRef.current[type];
-                    const sortedList = newIds.map(id => currentList.find(t => t.id === id)).filter(Boolean);
-                    
-                    // 4. 更新狀態，由 React 決定何時重新渲染
-                    setFunc([...sortedList]);
+                    // 2. 在 React 狀態中處理排序
+                    const currentData = [...stateRef.current[type]];
+                    const [movedItem] = currentData.splice(oldIndex, 1);
+                    currentData.splice(newIndex, 0, movedItem);
 
-                    // 5. 同步 Firebase
+                    // 3. 更新 React 狀態，這會引發順序正確的重新渲染
+                    setFunc(currentData);
+
+                    // 4. 延時同步 Firebase
                     setTimeout(() => {
                         const s = stateRef.current;
                         syncToFirebase(s.ai, s.workflow, s.media, s.outputs);
@@ -151,9 +152,8 @@ const App = () => {
             });
         };
 
-        ['ai', 'workflow', 'media', 'outputs'].forEach(t => init(t, 
-            t === 'ai' ? setAiTools : t === 'workflow' ? setWorkflowTools : t === 'media' ? setMediaTools : setOutputs
-        ));
+        init('ai', setAiTools); init('workflow', setWorkflowTools);
+        init('media', setMediaTools); init('outputs', setOutputs);
     }, [loading]);
 
     useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [loading, aiTools, workflowTools, mediaTools, outputs]);
@@ -162,7 +162,7 @@ const App = () => {
         const name = prompt("名稱:");
         const url = prompt("網址:");
         if (!name || !url) return;
-        const newTool = { id: Date.now().toString(), name, url, color: "bg-white", desc: "Custom Tool", icon: "link" };
+        const newTool = { id: `t-${Date.now()}`, name, url, color: "bg-white", desc: "Tool", icon: "link" };
         if (type === 'ai') setAiTools(p => [...p, newTool]);
         else if (type === 'wf') setWorkflowTools(p => [...p, newTool]);
         else if (type === 'md') setMediaTools(p => [...p, newTool]);
@@ -185,7 +185,7 @@ const App = () => {
             <button onClick={(e) => handleDelete(type, tool.id, e)} className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center z-20 shadow-lg"><i data-lucide="x" className="w-3 h-3"></i></button>
             <a href={tool.url} target="_blank" className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                 <div className={`w-10 h-10 shrink-0 rounded-xl ${tool.color} flex items-center justify-center border border-stone-100 shadow-sm overflow-hidden p-1.5`}>
-                    {useLucide ? <i data-lucide={tool.icon || 'sparkles'} className="w-5 h-5"></i> : <img src={getLogo(tool.url)} className="w-full h-full object-contain text-[8px]" alt="logo" />}
+                    {useLucide ? <i data-lucide={tool.icon || 'sparkles'} className="w-5 h-5"></i> : <img src={getLogo(tool.url)} className="w-full h-full object-contain" alt="icon" />}
                 </div>
                 <div className="min-w-0">
                     <h3 className="font-bold text-stone-800 text-sm truncate">{tool.name}</h3>
@@ -195,7 +195,7 @@ const App = () => {
         </div>
     );
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">LOADING NAVIGATOR...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">INITIALIZING SECURE FLOW...</div>;
 
     return (
         <div className="min-h-screen bg-[#FDFCF5]">
@@ -218,16 +218,16 @@ const App = () => {
 
             <main className="max-w-[1600px] mx-auto px-10 py-12 space-y-16">
                 <section id="ai-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="brain"></i> AI Intelligence</h2><button onClick={()=>handleAdd('ai')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
-                    <div ref={containerRefs.ai} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{aiTools.map(t=><ToolButton key={t.id} tool={t} type="ai"/>)}</div>
+                    <div ref={refs.ai} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{aiTools.map(t=><ToolButton key={t.id} tool={t} type="ai"/>)}</div>
                 </section>
                 <section id="wf-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="rocket"></i> Workflow</h2><button onClick={()=>handleAdd('wf')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
-                    <div ref={containerRefs.workflow} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{workflowTools.map(t=><ToolButton key={t.id} tool={t} type="wf"/>)}</div>
+                    <div ref={refs.workflow} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{workflowTools.map(t=><ToolButton key={t.id} tool={t} type="wf"/>)}</div>
                 </section>
                 <section id="md-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="video"></i> Creative</h2><button onClick={()=>handleAdd('md')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
-                    <div ref={containerRefs.media} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{mediaTools.map(t=><ToolButton key={t.id} tool={t} type="md"/>)}</div>
+                    <div ref={refs.media} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{mediaTools.map(t=><ToolButton key={t.id} tool={t} type="md"/>)}</div>
                 </section>
                 <section id="out-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="folder-kanban"></i> My Outputs</h2><button onClick={()=>handleAdd('out')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
-                    <div ref={containerRefs.outputs} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{outputs.map(t=><ToolButton key={t.id} tool={t} type="out" useLucide={true}/>)}</div>
+                    <div ref={refs.outputs} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{outputs.map(t=><ToolButton key={t.id} tool={t} type="out" useLucide={true}/>)}</div>
                 </section>
             </main>
             <footer className="text-center py-24 text-stone-300 text-[10px] font-black uppercase tracking-[0.5em]">Beige Studio &bull; Creative Workspace 2025</footer>
