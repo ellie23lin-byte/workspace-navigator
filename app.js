@@ -1,4 +1,4 @@
-// 基於 V1 架構：比對補全法 (保留使用者排序，自動補足缺失按鈕)
+// 基於 V1 架構：修正拖拉排序同步問題，無需重新整理即可儲存
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -16,19 +16,19 @@ try {
 
 const db = (typeof firebase !== 'undefined') ? firebase.firestore() : null;
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v20251222'; // 回歸原本 ID
+const DOCUMENT_ID = 'user_tool_order_v20251222';
 
 const { useState, useEffect, useRef } = React;
 
 const App = () => {
     const [tools, setTools] = useState(null);
+    const toolsRef = useRef(null); // 使用 Ref 追蹤最新狀態避免閉包陷阱
     const [currentTime, setCurrentTime] = useState(new Date());
     const sectionOrder = ['ai', 'workflow', 'design', 'outputs', 'media'];
     const sectionRefs = {
         ai: useRef(null), workflow: useRef(null), design: useRef(null), outputs: useRef(null), media: useRef(null)
     };
 
-    // V1 完整預設清單
     const defaultInitial = {
         ai: [
             { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800 text-white' },
@@ -80,34 +80,34 @@ const App = () => {
         ]
     };
 
+    // 更新 tools 時同步更新 Ref
+    const updateTools = (newData) => {
+        setTools(newData);
+        toolsRef.current = newData;
+    };
+
     useEffect(() => {
         const loadAndMerge = async () => {
             if (!db) return;
             try {
                 const doc = await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get();
+                let finalData;
                 if (doc.exists) {
                     const cloudData = doc.data();
                     const mergedData = {};
-                    
-                    // 智能比對：保留雲端順序，補足缺失按鈕
                     sectionOrder.forEach(key => {
                         const cloudList = cloudData[key] || [];
                         const defaultList = defaultInitial[key] || [];
-                        
-                        // 找出預設清單中有，但雲端清單中沒有的 ID
                         const cloudIds = new Set(cloudList.map(item => item.id));
                         const missingItems = defaultList.filter(item => !cloudIds.has(item.id));
-                        
                         mergedData[key] = [...cloudList, ...missingItems];
                     });
-                    
-                    setTools(mergedData);
-                    // 只有在有變動時才寫回雲端，避免無限更新
-                    db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(mergedData);
+                    finalData = mergedData;
                 } else {
-                    setTools(defaultInitial);
-                    await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(defaultInitial);
+                    finalData = defaultInitial;
                 }
+                updateTools(finalData);
+                db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(finalData);
             } catch (err) { console.error("Load Data Fail", err); }
         };
         loadAndMerge();
@@ -117,43 +117,51 @@ const App = () => {
 
     useEffect(() => {
         if (!tools || typeof Sortable === 'undefined') return;
+        
         const initSortable = () => {
             sectionOrder.forEach(key => {
                 const el = sectionRefs[key].current;
-                if (!el) return;
+                if (!el || el.sortable) return; // 避免重複初始化
+                
                 Sortable.create(el, {
-                    animation: 200,
+                    animation: 250,
+                    ghostClass: 'sortable-ghost',
                     onEnd: (evt) => {
-                        const newTools = { ...tools };
-                        const list = [...newTools[key]];
+                        // 使用 Ref 確保拿到最新狀態進行計算
+                        const currentData = { ...toolsRef.current };
+                        const list = [...currentData[key]];
                         const [moved] = list.splice(evt.oldIndex, 1);
                         list.splice(evt.newIndex, 0, moved);
-                        newTools[key] = list;
-                        setTools(newTools);
-                        if(db) db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(newTools);
+                        
+                        const newData = { ...currentData, [key]: list };
+                        
+                        // 1. 先更新本地 UI (透過 Ref 與 State)
+                        updateTools(newData);
+                        // 2. 異步寫入 Firebase
+                        if(db) db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(newData);
                     }
                 });
             });
             if (window.lucide) lucide.createIcons();
         };
-        setTimeout(initSortable, 300);
-    }, [tools]);
+        setTimeout(initSortable, 500);
+    }, [tools === null]); // 只在第一次載入資料後初始化一次
 
     const handleAdd = (type) => {
         const name = prompt("項目名稱:");
         const url = prompt("網址:");
         if (name && url) {
-            const newTools = { ...tools, [type]: [...tools[type], { id: Date.now().toString(), name, url, color: 'bg-white' }] };
-            setTools(newTools);
-            if(db) db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(newTools);
+            const newData = { ...tools, [type]: [...tools[type], { id: Date.now().toString(), name, url, color: 'bg-white' }] };
+            updateTools(newData);
+            if(db) db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(newData);
         }
     };
 
     const handleDelete = (type, id) => {
         if (confirm("確定刪除？")) {
-            const newTools = { ...tools, [type]: tools[type].filter(t => t.id !== id) };
-            setTools(newTools);
-            if(db) db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(newTools);
+            const newData = { ...tools, [type]: tools[type].filter(t => t.id !== id) };
+            updateTools(newData);
+            if(db) db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(newData);
         }
     };
 
@@ -162,7 +170,7 @@ const App = () => {
         catch (e) { return "https://www.google.com/s2/favicons?sz=64&domain=google.com"; }
     };
 
-    if (!tools) return <div className="p-10 text-stone-400 font-mono bg-[#FDFCF5] min-h-screen">SYNCING WORKSPACE...</div>;
+    if (!tools) return <div className="p-10 text-stone-400 font-mono bg-[#FDFCF5] min-h-screen flex items-center justify-center italic">INITIALIZING WORKSPACE...</div>;
 
     return (
         <div className="min-h-screen pb-20 bg-[#FDFCF5]">
@@ -193,7 +201,7 @@ const App = () => {
                             </h2>
                             <button onClick={() => handleAdd(type)} className="w-6 h-6 rounded-full bg-stone-100 text-stone-400 hover:bg-stone-800 hover:text-white transition-all flex items-center justify-center"><i data-lucide="plus" className="w-3 h-3"></i></button>
                         </div>
-                        <div ref={sectionRefs[type]} className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <div ref={sectionRefs[type]} className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 min-h-[50px]">
                             {tools[type].map(t => (
                                 <div key={t.id} className="group relative bg-white border border-stone-200 rounded-2xl p-3 hover:shadow-xl transition-all cursor-grab active:cursor-grabbing">
                                     <button onClick={() => handleDelete(type, t.id)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all shadow-lg z-20"><i data-lucide="x" className="w-3 h-3"></i></button>
