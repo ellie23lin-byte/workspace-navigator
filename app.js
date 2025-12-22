@@ -13,7 +13,7 @@ const db = firebase.firestore();
 db.settings({ experimentalForceLongPolling: true });
 
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v10_branding'; 
+const DOCUMENT_ID = 'user_tool_order_v11_final_touch'; 
 
 const { useState, useEffect, useRef } = React;
 
@@ -21,7 +21,6 @@ const App = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [loading, setLoading] = useState(true);
 
-    // 完整的原始工具資料
     const initialData = {
         ai: [
             { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800' },
@@ -40,13 +39,13 @@ const App = () => {
         workflow: [
             { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', color: 'bg-rose-50' },
             { id: 'wf-2', name: 'Make', url: 'https://www.make.com', color: 'bg-violet-50' },
+            { id: 'wf-12', name: 'Lucide Icons', url: 'https://lucide.dev/icons', color: 'bg-amber-50' }, // 新增 Lucide 按鈕
             { id: 'wf-11', name: 'Firebase', url: 'https://console.firebase.google.com', color: 'bg-orange-50' },
             { id: 'wf-9', name: 'Linear', url: 'https://linear.app', color: 'bg-indigo-50' },
             { id: 'wf-7', name: 'Notion', url: 'https://www.notion.so', color: 'bg-stone-50' },
             { id: 'wf-8', name: 'GitHub', url: 'https://github.com', color: 'bg-slate-50' },
             { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', color: 'bg-zinc-50' },
             { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', color: 'bg-blue-50' },
-            { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', color: 'bg-amber-50' },
             { id: 'wf-10', name: 'Arc Boost', url: 'https://arc.net', color: 'bg-orange-50' },
         ],
         media: [
@@ -60,8 +59,8 @@ const App = () => {
             { id: 'md-5', name: 'Soundtrap', url: 'https://www.soundtrap.com', color: 'bg-rose-50' },
         ],
         outputs: [
-            { id: 'out-1', name: '工作導航儀', desc: 'Current Workspace', url: 'https://petitns-space.github.io/workspace-navigator/', color: 'bg-stone-800' },
-            { id: 'out-2', name: '我的 Web CV', desc: 'Personal Profile', url: 'https://my-project-topaz-tau.vercel.app/', color: 'bg-white' },
+            { id: 'out-1', name: '工作導航儀', desc: 'Workspace', url: 'https://petitns-space.github.io/workspace-navigator/', color: 'bg-stone-800 text-white', icon: 'palette' },
+            { id: 'out-2', name: '我的 Web CV', desc: 'Portfolio', url: 'https://my-project-topaz-tau.vercel.app/', color: 'bg-rose-100 text-rose-600', icon: 'heart' },
         ]
     };
 
@@ -75,7 +74,6 @@ const App = () => {
     const mediaRef = useRef(null);
     const outputsRef = useRef(null);
 
-    // 抓取品牌圖示的輔助函式 (Google Favicon Service)
     const getLogo = (url) => {
         try {
             const domain = new URL(url).hostname;
@@ -112,7 +110,6 @@ const App = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // 初始化拖拽功能 (長按 200ms 保護)
     useEffect(() => {
         if (loading) return;
         const config = { animation: 200, delay: 200, delayOnTouchOnly: true, ghostClass: 'sortable-ghost' };
@@ -136,13 +133,13 @@ const App = () => {
         init(outputsRef, setOutputs);
     }, [loading, aiTools, workflowTools, mediaTools, outputs]);
 
-    useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [loading]);
+    useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [loading, aiTools, workflowTools, mediaTools, outputs]);
 
     const handleAdd = (type) => {
         const name = prompt("名稱:");
         const url = prompt("網址:");
         if (!name || !url) return;
-        const newTool = { id: Date.now().toString(), name, url, color: "bg-white", desc: "Tool" };
+        const newTool = { id: Date.now().toString(), name, url, color: "bg-white", desc: "Tool", icon: "sparkles" };
         if (type === 'ai') setAiTools(p => [...p, newTool]);
         if (type === 'wf') setWorkflowTools(p => [...p, newTool]);
         if (type === 'md') setMediaTools(p => [...p, newTool]);
@@ -160,13 +157,17 @@ const App = () => {
         setTimeout(() => syncToFirebase(aiTools, workflowTools, mediaTools, outputs), 100);
     };
 
-    // 按鈕組件：統一排版設計
-    const ToolButton = ({ tool, type, isMainOutput = false }) => (
+    // 統一按鈕高度與排版
+    const ToolButton = ({ tool, type, useLucide = false }) => (
         <div data-id={tool.id} className="group relative bg-white border border-stone-200 rounded-2xl p-3 hover:shadow-xl transition-all cursor-grab active:cursor-grabbing">
             <button onClick={(e) => handleDelete(type, tool.id, e)} className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center z-20 shadow-lg"><i data-lucide="x" className="w-3 h-3"></i></button>
             <a href={tool.url} target="_blank" className="flex items-center gap-3">
                 <div className={`w-10 h-10 shrink-0 rounded-xl ${tool.color} flex items-center justify-center border border-stone-100 shadow-sm overflow-hidden p-1.5`}>
-                    <img src={getLogo(tool.url)} alt={tool.name} className="w-full h-full object-contain" />
+                    {useLucide ? (
+                        <i data-lucide={tool.icon || 'sparkles'} className="w-5 h-5"></i>
+                    ) : (
+                        <img src={getLogo(tool.url)} alt={tool.name} className="w-full h-full object-contain" />
+                    )}
                 </div>
                 <div className="min-w-0">
                     <h3 className="font-bold text-stone-800 text-sm truncate">{tool.name}</h3>
@@ -176,7 +177,7 @@ const App = () => {
         </div>
     );
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">LOADING STUDIO...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400 tracking-tighter">PREPARING ASSETS...</div>;
 
     return (
         <div className="min-h-screen bg-[#FDFCF5]">
@@ -201,7 +202,6 @@ const App = () => {
 
             <main className="max-w-[1600px] mx-auto px-10 py-12 space-y-16">
                 
-                {/* 1. AI Section */}
                 <section id="ai-sec" className="scroll-mt-28">
                     <div className="flex justify-between items-end mb-8 border-b border-stone-200 pb-4">
                         <h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="brain"></i> AI Intelligence</h2>
@@ -212,7 +212,6 @@ const App = () => {
                     </div>
                 </section>
 
-                {/* 2. Workflow Automation */}
                 <section id="wf-sec" className="scroll-mt-28">
                     <div className="flex justify-between items-end mb-8 border-b border-stone-200 pb-4">
                         <h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="rocket"></i> Workflow Automation</h2>
@@ -223,7 +222,6 @@ const App = () => {
                     </div>
                 </section>
 
-                {/* 3. Creative Media */}
                 <section id="md-sec" className="scroll-mt-28">
                     <div className="flex justify-between items-end mb-8 border-b border-stone-200 pb-4">
                         <h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="video"></i> Creative Media</h2>
@@ -234,14 +232,13 @@ const App = () => {
                     </div>
                 </section>
 
-                {/* 4. My Outputs */}
                 <section id="out-sec" className="scroll-mt-28">
                     <div className="flex justify-between items-end mb-8 border-b border-stone-200 pb-4">
                         <h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="folder-kanban"></i> My Outputs</h2>
                         <button onClick={() => handleAdd('out')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><i data-lucide="plus"></i></button>
                     </div>
                     <div ref={outputsRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                        {outputs.map(tool => <ToolButton key={tool.id} tool={tool} type="out" />)}
+                        {outputs.map(tool => <ToolButton key={tool.id} tool={tool} type="out" useLucide={true} />)}
                     </div>
                 </section>
 
