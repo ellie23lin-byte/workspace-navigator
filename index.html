@@ -3,50 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio 工作導航儀 - AI Studio 優化版</title>
-    <!-- 引入外部資源 -->
+    <title>Studio 工作導航儀</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: #FDFCF5; 
+            user-select: none;
+        }
+        .sortable-ghost { opacity: 0.2; transform: scale(0.95); }
+        .sortable-drag { cursor: grabbing; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E8E6D9; border-radius: 10px; }
+    </style>
+
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; 
-            background-color: #FDFCF5; 
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .scroll-mt-24 { scroll-margin-top: 6rem; }
-        
-        /* 拖動樣式優化 */
-        .sortable-ghost { opacity: 0.2; transform: scale(0.95); }
-        .sortable-drag { cursor: grabbing; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
 
-        /* 自定義滾動條 */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #E8E6D9; border-radius: 10px; }
-    </style>
-</head>
-<body>
-   
-<div id="root"></div>
-
-    <!-- 重新引入 Babel -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- 引用 app.js, 告知 Babel 這是需要編譯的 JSX -->
-    <script type="text/babel" src="./app.js"></script>
-
-    <!-- 引入 SortableJS 用於實現拖拉功能 -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    
-    <!-- 新增: 引入 Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
     
+    <div id="root"></div>
+
+    <script type="text/babel" src="./add.js"></script>
+
 </body>
 </html>
