@@ -1,4 +1,4 @@
-// Firebase 初始化
+// 1. Firebase 配置
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -18,46 +18,66 @@ const DOCUMENT_ID = 'user_tool_order_v21_final';
 
 const { useState, useEffect, useRef } = React;
 
+// 2. 您提供的完整預設資料
+const initialData = {
+    ai: [
+        { id: 'ai-1', name: 'Manus', desc: '通用型 AI Agent 代理人', url: 'https://manus.ai', color: 'bg-stone-800 text-white' },
+        { id: 'ai-2', name: 'Gemini', desc: 'Google 多模態核心模型', url: 'https://gemini.google.com', color: 'bg-blue-100 text-blue-600' },
+        { id: 'ai-3', name: 'Gamma', desc: 'AI 簡報、網頁、文件生成', url: 'https://gamma.app', color: 'bg-purple-100 text-purple-600' },
+        { id: 'ai-4', name: 'NotebookLM', desc: 'AI 智慧筆記與文獻分析', url: 'https://notebooklm.google.com', color: 'bg-teal-100 text-teal-600' },
+        { id: 'ai-5', name: 'AI Studio', desc: 'Google AI 開發者工具', url: 'https://aistudio.google.com', color: 'bg-indigo-100 text-indigo-600' },
+        { id: 'ai-6', name: 'ChatGPT', desc: '全能對話生產力助手', url: 'https://chat.openai.com', color: 'bg-emerald-100 text-emerald-600' },
+        { id: 'ai-7', name: 'Claude', desc: '精準文案與邏輯推理', url: 'https://claude.ai', color: 'bg-orange-100 text-orange-600' },
+        { id: 'ai-8', name: 'DeepL', desc: '全球最精準的 AI 翻譯', url: 'https://www.deepl.com', color: 'bg-blue-50 text-blue-800' },
+        { id: 'ai-9', name: 'Perplexity', desc: 'AI 驅動的知識搜尋引擎', url: 'https://www.perplexity.ai', color: 'bg-cyan-100 text-cyan-600' },
+        { id: 'ai-10', name: 'Leonardo', desc: '創意影像生成與畫質提升', url: 'https://leonardo.ai', color: 'bg-amber-100 text-amber-700' },
+    ],
+    workflow: [
+        { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', color: 'bg-rose-50 text-rose-600' },
+        { id: 'wf-2', name: 'Make', url: 'https://www.make.com', color: 'bg-violet-50 text-violet-600' },
+        { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', color: 'bg-slate-100 text-slate-700' },
+        { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', color: 'bg-amber-50 text-amber-600' },
+        { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', color: 'bg-blue-50 text-blue-600' },
+        { id: 'wf-6', name: 'Wix', url: 'https://www.wix.com', color: 'bg-sky-50 text-sky-600' },
+        { id: 'wf-7', name: 'GitHub', url: 'https://github.com', color: 'bg-gray-100 text-gray-800' }
+    ],
+    design: [
+        { id: 'ds-1', name: 'Figma', url: 'https://www.figma.com', color: 'bg-orange-50 text-orange-500' },
+        { id: 'ds-2', name: 'Spline', url: 'https://spline.design', color: 'bg-indigo-50 text-indigo-500' },
+        { id: 'ds-3', name: 'Pinterest', url: 'https://www.pinterest.com', color: 'bg-red-50 text-red-500' },
+        { id: 'ds-4', name: 'Dribbble', url: 'https://dribbble.com', color: 'bg-pink-50 text-pink-500' },
+        { id: 'ds-5', name: 'Behance', url: 'https://www.behance.net', color: 'bg-blue-50 text-blue-500' },
+        { id: 'ds-6', name: 'Coolors', url: 'https://coolors.co', color: 'bg-teal-50 text-teal-500' },
+        { id: 'ds-7', name: 'Adobe Color', url: 'https://color.adobe.com', color: 'bg-yellow-50 text-yellow-600' },
+        { id: 'ds-8', name: 'Fontjoy', url: 'https://fontjoy.com', color: 'bg-lime-50 text-lime-600' },
+        { id: 'ds-9', name: 'Google Fonts', url: 'https://fonts.google.com', color: 'bg-green-50 text-green-600' },
+        { id: 'ds-10', name: 'Lucide', url: 'https://lucide.dev', color: 'bg-cyan-50 text-cyan-600' }
+    ],
+    media: [
+        { id: 'md-1', name: 'Midjourney', url: 'https://www.midjourney.com', color: 'bg-violet-100 text-violet-700' },
+        { id: 'md-2', name: 'Runway', url: 'https://runwayml.com', color: 'bg-pink-100 text-pink-700' },
+        { id: 'md-3', name: 'Pika', url: 'https://pika.art', color: 'bg-fuchsia-100 text-fuchsia-700' },
+        { id: 'md-4', name: 'Luma', url: 'https://lumalabs.ai', color: 'bg-purple-100 text-purple-700' },
+        { id: 'md-5', name: 'Krea', url: 'https://www.krea.ai', color: 'bg-sky-100 text-sky-700' },
+        { id: 'md-6', name: 'Unsplash', url: 'https://unsplash.com', color: 'bg-slate-100 text-slate-700' },
+        { id: 'md-7', name: 'Freepik', url: 'https://www.freepik.com', color: 'bg-cyan-100 text-cyan-700' },
+        { id: 'md-8', name: 'Icons8', url: 'https://icons8.com', color: 'bg-emerald-100 text-emerald-700' },
+        { id: 'md-9', name: 'Envato Elements', url: 'https://elements.envato.com', color: 'bg-lime-100 text-lime-700' },
+        { id: 'md-10', name: 'YouTube', url: 'https://youtube.com', color: 'bg-red-100 text-red-700' }
+    ]
+};
+
 const App = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [loading, setLoading] = useState(true);
-
-    const [aiTools, setAiTools] = useState([]);
-    const [workflowTools, setWorkflowTools] = useState([]);
-    const [designTools, setDesignTools] = useState([]); // 新增：Design 分類
-    const [mediaTools, setMediaTools] = useState([]);
-    const [outputs, setOutputs] = useState([]);
+    const [tools, setTools] = useState(initialData);
 
     const refs = {
-        ai: useRef(null), workflow: useRef(null), design: useRef(null), media: useRef(null), outputs: useRef(null)
+        ai: useRef(null), workflow: useRef(null), design: useRef(null), media: useRef(null)
     };
     
-    const stateRef = useRef({ ai: [], workflow: [], design: [], media: [], outputs: [] });
+    const stateRef = useRef(initialData);
     const sortableInstances = useRef([]);
-
-    const initialData = {
-        ai: [
-            { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800 text-white' },
-            { id: 'ai-2', name: 'Gemini', desc: 'Google AI', url: 'https://gemini.google.com', color: 'bg-blue-50' },
-            { id: 'ai-6', name: 'ChatGPT', desc: 'OpenAI', url: 'https://chat.openai.com', color: 'bg-emerald-50' }
-        ],
-        workflow: [
-            { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', color: 'bg-rose-50' },
-            { id: 'wf-8', name: 'GitHub', url: 'https://github.com', color: 'bg-slate-50' }
-        ],
-        design: [ // 補回 Design Resources
-            { id: 'ds-1', name: 'Figma', url: 'https://www.figma.com', desc: 'UI Design', color: 'bg-orange-50' },
-            { id: 'ds-2', name: 'Spline', url: 'https://spline.design', desc: '3D Web', color: 'bg-indigo-50' },
-            { id: 'ds-3', name: 'Lucide', url: 'https://lucide.dev', desc: 'Icons', color: 'bg-cyan-50' }
-        ],
-        media: [
-            { id: 'md-1', name: 'Midjourney', url: 'https://www.midjourney.com', color: 'bg-violet-50' },
-            { id: 'md-10', name: 'YouTube', url: 'https://youtube.com', color: 'bg-red-50' }
-        ],
-        outputs: [
-            { id: 'out-1', name: '工作導航儀', desc: 'Workspace', url: 'https://petitns-space.github.io/workspace-navigator/', color: 'bg-stone-800 text-white', icon: 'zap' }
-        ]
-    };
 
     const getLogo = (url) => {
         try {
@@ -66,38 +86,31 @@ const App = () => {
         } catch (e) { return `https://www.google.com/s2/favicons?sz=64&domain=google.com`; }
     };
 
-    const syncToFirebase = (ai, wf, ds, md, out) => {
+    const syncToFirebase = (data) => {
         if (!db) return;
         db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({
-            ai, workflow: wf, design: ds, media: md, outputs: out,
+            ...data,
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true }).catch(err => console.error("Firebase Sync Fail:", err));
     };
 
     useEffect(() => {
-        stateRef.current = { ai: aiTools, workflow: workflowTools, design: designTools, media: mediaTools, outputs: outputs };
-    }, [aiTools, workflowTools, designTools, mediaTools, outputs]);
+        stateRef.current = tools;
+    }, [tools]);
 
     useEffect(() => {
         if (db) {
             db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get().then(doc => {
                 if (doc.exists && doc.data().ai) {
-                    const d = doc.data();
-                    setAiTools(d.ai || []); setWorkflowTools(d.workflow || []); 
-                    setDesignTools(d.design || []); setMediaTools(d.media || []); setOutputs(d.outputs || []);
+                    setTools(doc.data());
                 } else {
-                    setAiTools(initialData.ai); setWorkflowTools(initialData.workflow); 
-                    setDesignTools(initialData.design); setMediaTools(initialData.media); setOutputs(initialData.outputs);
+                    setTools(initialData);
                 }
                 setLoading(false);
             }).catch(() => {
-                setAiTools(initialData.ai); setWorkflowTools(initialData.workflow);
-                setDesignTools(initialData.design); setMediaTools(initialData.media); setOutputs(initialData.outputs);
                 setLoading(false);
             });
         } else {
-            setAiTools(initialData.ai); setWorkflowTools(initialData.workflow);
-            setDesignTools(initialData.design); setMediaTools(initialData.media); setOutputs(initialData.outputs);
             setLoading(false);
         }
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -110,7 +123,7 @@ const App = () => {
         sortableInstances.current.forEach(ins => ins && ins.destroy());
         sortableInstances.current = [];
 
-        const init = (type, setFunc) => {
+        const init = (type) => {
             const el = refs[type].current;
             if (!el) return;
             
@@ -124,59 +137,49 @@ const App = () => {
                     if (oldIndex < newIndex) from.insertBefore(item, children[oldIndex]);
                     else from.insertBefore(item, children[oldIndex].nextSibling || null);
 
-                    const currentData = [...stateRef.current[type]];
-                    const [movedItem] = currentData.splice(oldIndex, 1);
-                    currentData.splice(newIndex, 0, movedItem);
+                    const newTools = { ...stateRef.current };
+                    const currentList = [...newTools[type]];
+                    const [movedItem] = currentList.splice(oldIndex, 1);
+                    currentList.splice(newIndex, 0, movedItem);
+                    newTools[type] = currentList;
 
-                    setFunc(currentData);
-                    setTimeout(() => {
-                        const s = stateRef.current;
-                        syncToFirebase(s.ai, s.workflow, s.design, s.media, s.outputs);
-                    }, 500);
+                    setTools(newTools);
+                    syncToFirebase(newTools);
                 }
             });
             sortableInstances.current.push(ins);
         };
 
-        ['ai', 'workflow', 'design', 'media', 'outputs'].forEach(t => init(t, 
-            t === 'ai' ? setAiTools : t === 'workflow' ? setWorkflowTools : t === 'design' ? setDesignTools : t === 'media' ? setMediaTools : setOutputs
-        ));
-
+        ['ai', 'workflow', 'design', 'media'].forEach(t => init(t));
         return () => sortableInstances.current.forEach(ins => ins && ins.destroy());
     }, [loading]);
 
-    useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [loading, aiTools, workflowTools, designTools, mediaTools, outputs]);
+    useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [loading, tools]);
 
     const handleAdd = (type) => {
         const name = prompt("名稱:");
         const url = prompt("網址:");
         if (!name || !url) return;
-        const newTool = { id: `t-${Date.now()}`, name, url, color: "bg-white", desc: "Tool", icon: "link" };
-        if (type === 'ai') setAiTools(p => [...p, newTool]);
-        else if (type === 'wf') setWorkflowTools(p => [...p, newTool]);
-        else if (type === 'ds') setDesignTools(p => [...p, newTool]);
-        else if (type === 'md') setMediaTools(p => [...p, newTool]);
-        else if (type === 'out') setOutputs(p => [...p, newTool]);
-        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.design, stateRef.current.media, stateRef.current.outputs), 300);
+        const newTool = { id: `t-${Date.now()}`, name, url, color: "bg-white", desc: "Tool" };
+        const newTools = { ...tools, [type]: [...tools[type], newTool] };
+        setTools(newTools);
+        syncToFirebase(newTools);
     };
 
     const handleDelete = (type, id, e) => {
         e.preventDefault(); e.stopPropagation();
         if (!confirm("確定刪除？")) return;
-        if (type === 'ai') setAiTools(p => p.filter(t => t.id !== id));
-        else if (type === 'wf') setWorkflowTools(p => p.filter(t => t.id !== id));
-        else if (type === 'ds') setDesignTools(p => p.filter(t => t.id !== id));
-        else if (type === 'md') setMediaTools(p => p.filter(t => t.id !== id));
-        else if (type === 'out') setOutputs(p => p.filter(t => t.id !== id));
-        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.design, stateRef.current.media, stateRef.current.outputs), 300);
+        const newTools = { ...tools, [type]: tools[type].filter(t => t.id !== id) };
+        setTools(newTools);
+        syncToFirebase(newTools);
     };
 
-    const ToolButton = ({ tool, type, useLucide = false }) => (
+    const ToolButton = ({ tool, type }) => (
         <div key={tool.id} data-id={tool.id} className="group relative bg-white border border-stone-200 rounded-2xl p-3 hover:shadow-xl transition-all cursor-grab active:cursor-grabbing">
             <button onClick={(e) => handleDelete(type, tool.id, e)} className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center z-20 shadow-lg transition-opacity"><i data-lucide="x" className="w-3 h-3"></i></button>
             <a href={tool.url} target="_blank" className="flex items-center gap-3">
                 <div className={`w-10 h-10 shrink-0 rounded-xl ${tool.color || 'bg-stone-100'} flex items-center justify-center border border-stone-100 shadow-sm overflow-hidden p-1.5`}>
-                    {useLucide ? <i data-lucide={tool.icon || 'sparkles'} className="w-5 h-5"></i> : <img src={getLogo(tool.url)} className="w-full h-full object-contain" alt="icon" />}
+                    <img src={getLogo(tool.url)} className="w-full h-full object-contain" alt="icon" />
                 </div>
                 <div className="min-w-0">
                     <h3 className="font-bold text-stone-800 text-sm truncate">{tool.name}</h3>
@@ -198,8 +201,8 @@ const App = () => {
                             <h1 className="text-xl font-bold text-stone-700 tracking-tight hidden md:block">Studio Navigator</h1>
                         </div>
                         <nav className="flex space-x-8">
-                            {['AI 思考', '生產力', '設計資源', '影音媒體', '我的產出'].map((label, idx) => (
-                                <button key={label} onClick={() => document.getElementById(['ai-sec', 'wf-sec', 'ds-sec', 'md-sec', 'out-sec'][idx])?.scrollIntoView({behavior:'smooth'})} className="text-[11px] font-black text-stone-400 hover:text-stone-900 uppercase tracking-widest">{label}</button>
+                            {['AI 思考', '流程開發', '設計資源', '創意媒體'].map((label, idx) => (
+                                <button key={label} onClick={() => document.getElementById(['ai-sec', 'wf-sec', 'ds-sec', 'md-sec'][idx])?.scrollIntoView({behavior:'smooth'})} className="text-[11px] font-black text-stone-400 hover:text-stone-900 uppercase tracking-widest">{label}</button>
                             ))}
                         </nav>
                     </div>
@@ -209,23 +212,19 @@ const App = () => {
 
             <main className="max-w-[1600px] mx-auto px-10 py-12 space-y-16">
                 <section id="ai-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-[11px] font-black text-stone-400 uppercase tracking-[0.3em] flex items-center gap-3"><i data-lucide="brain" className="w-4 h-4"></i> AI Intelligence</h2><button onClick={()=>handleAdd('ai')} className="w-8 h-8 bg-stone-100 text-stone-400 hover:bg-stone-800 hover:text-white rounded-full flex items-center justify-center transition-all"><i data-lucide="plus" className="w-4 h-4"></i></button></div>
-                    <div ref={refs.ai} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{aiTools.map(t=><ToolButton key={t.id} tool={t} type="ai"/>)}</div>
+                    <div ref={refs.ai} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">{tools.ai.map(t=><ToolButton key={t.id} tool={t} type="ai"/>)}</div>
                 </section>
                 
-                <section id="wf-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-[11px] font-black text-stone-400 uppercase tracking-[0.3em] flex items-center gap-3"><i data-lucide="rocket" className="w-4 h-4"></i> Workflow</h2><button onClick={()=>handleAdd('wf')} className="w-8 h-8 bg-stone-100 text-stone-400 hover:bg-stone-800 hover:text-white rounded-full flex items-center justify-center transition-all"><i data-lucide="plus" className="w-4 h-4"></i></button></div>
-                    <div ref={refs.workflow} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{workflowTools.map(t=><ToolButton key={t.id} tool={t} type="wf"/>)}</div>
+                <section id="wf-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-[11px] font-black text-stone-400 uppercase tracking-[0.3em] flex items-center gap-3"><i data-lucide="rocket" className="w-4 h-4"></i> Workflow</h2><button onClick={()=>handleAdd('workflow')} className="w-8 h-8 bg-stone-100 text-stone-400 hover:bg-stone-800 hover:text-white rounded-full flex items-center justify-center transition-all"><i data-lucide="plus" className="w-4 h-4"></i></button></div>
+                    <div ref={refs.workflow} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">{tools.workflow.map(t=><ToolButton key={t.id} tool={t} type="workflow"/>)}</div>
                 </section>
 
-                <section id="ds-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-[11px] font-black text-stone-400 uppercase tracking-[0.3em] flex items-center gap-3"><i data-lucide="palette" className="w-4 h-4"></i> Design Resources</h2><button onClick={()=>handleAdd('ds')} className="w-8 h-8 bg-stone-100 text-stone-400 hover:bg-stone-800 hover:text-white rounded-full flex items-center justify-center transition-all"><i data-lucide="plus" className="w-4 h-4"></i></button></div>
-                    <div ref={refs.design} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{designTools.map(t=><ToolButton key={t.id} tool={t} type="ds"/>)}</div>
+                <section id="ds-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-[11px] font-black text-stone-400 uppercase tracking-[0.3em] flex items-center gap-3"><i data-lucide="palette" className="w-4 h-4"></i> Design Resources</h2><button onClick={()=>handleAdd('design')} className="w-8 h-8 bg-stone-100 text-stone-400 hover:bg-stone-800 hover:text-white rounded-full flex items-center justify-center transition-all"><i data-lucide="plus" className="w-4 h-4"></i></button></div>
+                    <div ref={refs.design} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">{tools.design.map(t=><ToolButton key={t.id} tool={t} type="design"/>)}</div>
                 </section>
 
-                <section id="md-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-[11px] font-black text-stone-400 uppercase tracking-[0.3em] flex items-center gap-3"><i data-lucide="video" className="w-4 h-4"></i> Creative</h2><button onClick={()=>handleAdd('md')} className="w-8 h-8 bg-stone-100 text-stone-400 hover:bg-stone-800 hover:text-white rounded-full flex items-center justify-center transition-all"><i data-lucide="plus" className="w-4 h-4"></i></button></div>
-                    <div ref={refs.media} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{mediaTools.map(t=><ToolButton key={t.id} tool={t} type="md"/>)}</div>
-                </section>
-
-                <section id="out-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-[11px] font-black text-stone-400 uppercase tracking-[0.3em] flex items-center gap-3"><i data-lucide="folder-kanban" className="w-4 h-4"></i> My Outputs</h2><button onClick={()=>handleAdd('out')} className="w-8 h-8 bg-stone-100 text-stone-400 hover:bg-stone-800 hover:text-white rounded-full flex items-center justify-center transition-all"><i data-lucide="plus" className="w-4 h-4"></i></button></div>
-                    <div ref={refs.outputs} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{outputs.map(t=><ToolButton key={t.id} tool={t} type="out" useLucide={true}/>)}</div>
+                <section id="md-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-[11px] font-black text-stone-400 uppercase tracking-[0.3em] flex items-center gap-3"><i data-lucide="video" className="w-4 h-4"></i> Creative Media</h2><button onClick={()=>handleAdd('media')} className="w-8 h-8 bg-stone-100 text-stone-400 hover:bg-stone-800 hover:text-white rounded-full flex items-center justify-center transition-all"><i data-lucide="plus" className="w-4 h-4"></i></button></div>
+                    <div ref={refs.media} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">{tools.media.map(t=><ToolButton key={t.id} tool={t} type="media"/>)}</div>
                 </section>
             </main>
             <footer className="text-center py-24 text-stone-300 text-[10px] font-black uppercase tracking-[0.5em]">Beige Studio &bull; Creative Workspace 2025</footer>
@@ -233,12 +232,9 @@ const App = () => {
     );
 };
 
-// 最終相容性渲染邏輯
+// 最終掛載邏輯
 const container = document.getElementById('root');
 if (container) {
-    if (typeof ReactDOM.createRoot === 'function') {
-        ReactDOM.createRoot(container).render(React.createElement(App));
-    } else {
-        ReactDOM.render(React.createElement(App), container);
-    }
+    const root = ReactDOM.createRoot(container);
+    root.render(React.createElement(App));
 }
