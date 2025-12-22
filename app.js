@@ -8,309 +8,269 @@ const firebaseConfig = {
     appId: "1:219057281896:web:63304825302437231754dd"
 };
 
-// 2. 初始化 Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 db.settings({ experimentalForceLongPolling: true });
 
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v3';
+const DOCUMENT_ID = 'user_tool_order_stable_v5';
 
 const { useState, useEffect, useRef } = React;
 
-// 3. 預設工具清單 (靜態常數)
-const initialData = {
-    ai: [
-        { id: 'ai-1', name: 'Manus', desc: '通用型 AI Agent 代理人', icon: 'bot', url: 'https://manus.ai', color: 'bg-stone-800 text-white border-stone-900' },
-        { id: 'ai-2', name: 'Gemini', desc: 'Google 多模態核心模型', icon: 'sparkles', url: 'https://gemini.google.com', color: 'bg-blue-100 text-blue-600 border-blue-200' },
-        { id: 'ai-3', name: 'Gamma', desc: 'AI 簡報、網頁、文件生成', icon: 'presentation', url: 'https://gamma.app', color: 'bg-purple-100 text-purple-600 border-purple-200' },
-        { id: 'ai-4', name: 'NotebookLM', desc: 'AI 智慧筆記與文獻分析', icon: 'book-open', url: 'https://notebooklm.google.com', color: 'bg-teal-100 text-teal-600 border-teal-200' },
-        { id: 'ai-5', name: 'AI Studio', desc: 'Google AI 開發者工具', icon: 'terminal', url: 'https://aistudio.google.com', color: 'bg-indigo-100 text-indigo-600 border-indigo-200' },
-        { id: 'ai-6', name: 'ChatGPT', desc: '全能對話生產力助手', icon: 'message-square', url: 'https://chat.openai.com', color: 'bg-emerald-100 text-emerald-600 border-emerald-200' },
-        { id: 'ai-7', name: 'Claude', desc: '精準文案與邏輯推理', icon: 'brain-circuit', url: 'https://claude.ai', color: 'bg-orange-100 text-orange-600 border-orange-200' },
-        { id: 'ai-8', name: 'DeepL', desc: '全球最精準的 AI 翻譯', icon: 'languages', url: 'https://www.deepl.com', color: 'bg-blue-50 text-blue-800 border-blue-100' },
-        { id: 'ai-9', name: 'Perplexity', desc: 'AI 驅動的知識搜尋引擎', icon: 'zap', url: 'https://www.perplexity.ai', color: 'bg-cyan-100 text-cyan-600 border-cyan-200' },
-        { id: 'ai-10', name: 'Leonardo', desc: '創意影像生成與畫質提升', icon: 'image', url: 'https://leonardo.ai', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-    ],
-    workflow: [
-        { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', icon: 'infinity', bgColor: 'bg-rose-50 border-rose-100 text-rose-600' },
-        { id: 'wf-2', name: 'Make', url: 'https://www.make.com', icon: 'zap', bgColor: 'bg-violet-50 border-violet-100 text-violet-600' },
-        { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', icon: 'layout', bgColor: 'bg-slate-100 border-slate-200 text-slate-700' },
-        { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', icon: 'file-code', bgColor: 'bg-amber-50 border-amber-100 text-amber-600' },
-        { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', icon: 'monitor', bgColor: 'bg-blue-50 border-blue-100 text-blue-600' },
-        { id: 'wf-6', name: 'Wix', url: 'https://www.wix.com', icon: 'globe', bgColor: 'bg-sky-50 border-sky-100 text-sky-600' },
-        { id: 'wf-7', name: 'GitHub', url: 'https://github.com', icon: 'github', bgColor: 'bg-gray-100 border-gray-200 text-gray-800' }
-    ],
-    design: [
-        { id: 'ds-1', name: 'Figma', url: 'https://www.figma.com', icon: 'figma', bgColor: 'bg-orange-50 border-orange-100 text-orange-500' },
-        { id: 'ds-2', name: 'Spline', url: 'https://spline.design', icon: 'cube', bgColor: 'bg-indigo-50 border-indigo-100 text-indigo-500' },
-        { id: 'ds-3', name: 'Pinterest', url: 'https://www.pinterest.com', icon: 'pinterest', bgColor: 'bg-red-50 border-red-100 text-red-500' },
-        { id: 'ds-4', name: 'Dribbble', url: 'https://dribbble.com', icon: 'dribbble', bgColor: 'bg-pink-50 border-pink-100 text-pink-500' },
-        { id: 'ds-5', name: 'Behance', url: 'https://www.behance.net', icon: 'behance', bgColor: 'bg-blue-50 border-blue-100 text-blue-500' },
-        { id: 'ds-6', name: 'Coolors', url: 'https://coolors.co', icon: 'palette', bgColor: 'bg-teal-50 border-teal-100 text-teal-500' },
-        { id: 'ds-7', name: 'Adobe Color', url: 'https://color.adobe.com', icon: 'swatch-book', bgColor: 'bg-yellow-50 border-yellow-100 text-yellow-600' },
-        { id: 'ds-8', name: 'Fontjoy', url: 'https://fontjoy.com', icon: 'type', bgColor: 'bg-lime-50 border-lime-100 text-lime-600' },
-        { id: 'ds-9', name: 'Google Fonts', url: 'https://fonts.google.com', icon: 'pilcrow', bgColor: 'bg-green-50 border-green-100 text-green-600' },
-        { id: 'ds-10', name: 'Lucide', url: 'https://lucide.dev', icon: 'sparkles', bgColor: 'bg-cyan-50 border-cyan-100 text-cyan-600' }
-    ],
-    media: [
-        { id: 'md-1', name: 'Midjourney', url: 'https://www.midjourney.com', icon: 'image', bgColor: 'bg-violet-100 border-violet-200 text-violet-700' },
-        { id: 'md-2', name: 'Runway', url: 'https://runwayml.com', icon: 'video', bgColor: 'bg-pink-100 border-pink-200 text-pink-700' },
-        { id: 'md-3', name: 'Pika', url: 'https://pika.art', icon: 'film', bgColor: 'bg-fuchsia-100 border-fuchsia-200 text-fuchsia-700' },
-        { id: 'md-4', name: 'Luma', url: 'https://lumalabs.ai', icon: 'camera', bgColor: 'bg-purple-100 border-purple-200 text-purple-700' },
-        { id: 'md-5', name: 'Krea', url: 'https://www.krea.ai', icon: 'wand-2', bgColor: 'bg-sky-100 border-sky-200 text-sky-700' },
-        { id: 'md-6', name: 'Unsplash', url: 'https://unsplash.com', icon: 'camera', bgColor: 'bg-slate-100 border-slate-200 text-slate-700' },
-        { id: 'md-7', name: 'Freepik', url: 'https://www.freepik.com', icon: 'layout-grid', bgColor: 'bg-cyan-100 border-cyan-200 text-cyan-700' },
-        { id: 'md-8', name: 'Icons8', url: 'https://icons8.com', icon: 'mouse-pointer-2', bgColor: 'bg-emerald-100 border-emerald-200 text-emerald-700' },
-        { id: 'md-9', name: 'Envato Elements', url: 'https://elements.envato.com', icon: 'folder-search', bgColor: 'bg-lime-100 border-lime-200 text-lime-700' },
-        { id: 'md-10', name: 'YouTube', url: 'https://youtube.com', icon: 'youtube', bgColor: 'bg-red-100 border-red-200 text-red-700' }
-    ]
-};
-
-// 4. React App 元件
-const App = ( ) => {
+const App = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [loading, setLoading] = useState(true);
-    const [tools, setTools] = useState(null);
-    const [order, setOrder] = useState(null);
-    const [isEditing, setIsEditing] = useState(false);
 
-    const sortableRefs = useRef({});
+    // 原始數據備援
+    const initialData = {
+        ai: [
+            { id: 'ai-1', name: 'Manus', desc: '通用型 AI Agent 代理人', icon: 'bot', url: 'https://manus.ai', color: 'bg-stone-800 text-white border-stone-900' },
+            { id: 'ai-2', name: 'Gemini', desc: 'Google 多模態核心模型', icon: 'sparkles', url: 'https://gemini.google.com', color: 'bg-blue-100 text-blue-600 border-blue-200' },
+            { id: 'ai-3', name: 'Gamma', desc: 'AI 簡報、網頁、文件生成', icon: 'presentation', url: 'https://gamma.app', color: 'bg-purple-100 text-purple-600 border-purple-200' },
+            { id: 'ai-4', name: 'NotebookLM', desc: 'AI 智慧筆記與文獻分析', icon: 'book-open', url: 'https://notebooklm.google.com', color: 'bg-teal-100 text-teal-600 border-teal-200' },
+            { id: 'ai-5', name: 'AI Studio', desc: 'Google AI 開發者工具', icon: 'terminal', url: 'https://aistudio.google.com', color: 'bg-indigo-100 text-indigo-600 border-indigo-200' },
+            { id: 'ai-6', name: 'ChatGPT', desc: '全能對話生產力助手', icon: 'message-square', url: 'https://chat.openai.com', color: 'bg-emerald-100 text-emerald-600 border-emerald-200' },
+            { id: 'ai-7', name: 'Claude', desc: '精準文案與邏輯推理', icon: 'brain-circuit', url: 'https://claude.ai', color: 'bg-orange-100 text-orange-600 border-orange-200' },
+            { id: 'ai-8', name: 'DeepL', desc: '全球最精準的 AI 翻譯', icon: 'languages', url: 'https://www.deepl.com', color: 'bg-blue-50 text-blue-800 border-blue-100' },
+            { id: 'ai-9', name: 'Perplexity', desc: 'AI 驅動的知識搜尋引擎', icon: 'zap', url: 'https://www.perplexity.ai', color: 'bg-cyan-100 text-cyan-600 border-cyan-200' },
+            { id: 'ai-10', name: 'Leonardo', desc: '創意影像生成與畫質提升', icon: 'image', url: 'https://leonardo.ai', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+        ],
+        workflow: [
+            { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', icon: 'infinity', bgColor: 'bg-rose-50 border-rose-100 text-rose-600' },
+            { id: 'wf-2', name: 'Make', url: 'https://www.make.com', icon: 'zap', bgColor: 'bg-violet-50 border-violet-100 text-violet-600' },
+            { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', icon: 'layout', bgColor: 'bg-slate-100 border-slate-200 text-slate-700' },
+            { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', icon: 'file-code', bgColor: 'bg-amber-50 border-amber-100 text-amber-600' },
+            { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', icon: 'monitor', bgColor: 'bg-blue-50 border-blue-100 text-blue-600' },
+            { id: 'wf-6', name: 'Wix', url: 'https://www.wix.com', icon: 'globe', bgColor: 'bg-sky-50 border-sky-100 text-sky-600' },
+            { id: 'wf-7', name: 'Notion', url: 'https://www.notion.so', icon: 'book-open', bgColor: 'bg-stone-100 border-stone-200 text-stone-600' },
+            { id: 'wf-8', name: 'GitHub', url: 'https://github.com', icon: 'code-2', bgColor: 'bg-indigo-50 border-indigo-100 text-indigo-600' },
+        ],
+        media: [
+            { id: 'md-1', name: 'CapCut', url: 'https://www.capcut.com', icon: 'video', bgColor: 'bg-cyan-50 border-cyan-100 text-cyan-600' },
+            { id: 'md-2', name: 'Canva', url: 'https://www.canva.com', icon: 'pen-tool', bgColor: 'bg-fuchsia-50 border-fuchsia-100 text-fuchsia-600' },
+            { id: 'md-3', name: 'Remove.bg', url: 'https://www.remove.bg', icon: 'scissors', bgColor: 'bg-lime-50 border-lime-100 text-lime-600' },
+            { id: 'md-4', name: 'Stable Audio', url: 'https://stableaudio.com', icon: 'audio-lines', bgColor: 'bg-indigo-50 border-indigo-100 text-indigo-600' },
+            { id: 'md-5', name: 'Soundtrap', url: 'https://www.soundtrap.com', icon: 'waves', bgColor: 'bg-rose-50 border-rose-100 text-rose-600' },
+            { id: 'md-6', name: 'Suno', url: 'https://suno.com', icon: 'music', bgColor: 'bg-orange-50 border-orange-100 text-orange-600' },
+        ]
+    };
 
-    // 時間更新 effect
+    const [aiTools, setAiTools] = useState(initialData.ai);
+    const [workflowTools, setWorkflowTools] = useState(initialData.workflow);
+    const [mediaTools, setMediaTools] = useState(initialData.media);
+
+    const aiRef = useRef(null);
+    const workflowRef = useRef(null);
+    const mediaRef = useRef(null);
+
+    // 同步函式
+    const syncToFirebase = (ai, wf, md) => {
+        db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({
+            ai, workflow: wf, media: md,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(err => console.error("Sync Error:", err));
+    };
+
+    // 捲動函式
+    const scrollToSection = (id) => {
+        const element = document.getElementById(id);
+        if (element) {
+            const offset = 100; // 扣除 fixed header 高度
+            const bodyRect = document.body.getBoundingClientRect().top;
+            const elementRect = element.getBoundingClientRect().top;
+            const elementPosition = elementRect - bodyRect;
+            const offsetPosition = elementPosition - offset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+        }
+    };
+
+    // 讀取初始資料
     useEffect(() => {
+        db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get().then(doc => {
+            if (doc.exists && doc.data().ai) {
+                const data = doc.data();
+                setAiTools(data.ai);
+                setWorkflowTools(data.workflow);
+                setMediaTools(data.media);
+            }
+            setLoading(false);
+        }).catch(() => setLoading(false));
+
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
-    // 資料載入 effect
+    // 拖拉初始化 (增加 delay 200ms 以支援滑動)
     useEffect(() => {
-        console.log("Starting to fetch data from Firebase...");
-        const loadingTimeout = setTimeout(() => {
-            if (loading) {
-                console.warn("Firebase connection timed out after 5 seconds. Falling back to initial data.");
-                setTools(initialData);
-                setOrder(Object.keys(initialData));
-                setLoading(false);
-            }
-        }, 5000);
-
-        const unsubscribe = db.collection(COLLECTION_NAME).doc(DOCUMENT_ID)
-            .onSnapshot(doc => {
-                clearTimeout(loadingTimeout);
-                console.log("Received data from Firebase.");
-                if (doc.exists) {
-                    const data = doc.data();
-                    if (data && data.tools && data.order && Array.isArray(data.order)) {
-                        console.log("Firebase data is valid. Applying state.");
-                        setTools(data.tools);
-                        setOrder(data.order);
-                    } else {
-                        console.warn("Firebase data is incomplete or malformed. Falling back to initial data.");
-                        setTools(initialData);
-                        setOrder(Object.keys(initialData));
-                    }
-                } else {
-                    console.log("Document does not exist. Using initial data.");
-                    setTools(initialData);
-                    setOrder(Object.keys(initialData));
-                }
-                setLoading(false);
-            }, err => {
-                clearTimeout(loadingTimeout);
-                console.error("Error fetching from Firebase: ", err);
-                console.log("Falling back to initial data due to error.");
-                setTools(initialData);
-                setOrder(Object.keys(initialData));
-                setLoading(false);
-            });
-
-        return () => {
-            console.log("Cleaning up Firebase listener and timeout.");
-            unsubscribe();
-            clearTimeout(loadingTimeout);
-        };
-    }, []);
-
-    // Sortable.js 初始化 effect
-    useEffect(() => {
-        if (loading || !order) {
-            return;
-        }
-        
-        console.log("Initializing or re-initializing Sortable.js...");
-
-        // 清理舊的實例
-        Object.values(sortableRefs.current).forEach(instance => instance && instance.destroy());
-        sortableRefs.current = {};
-
-        // 主容器排序
-        const mainContainer = document.getElementById('main-container');
-        if (mainContainer) {
-            sortableRefs.current.main = new Sortable(mainContainer, {
-                animation: 150,
-                handle: '.drag-handle',
-                onEnd: (evt) => {
-                    const newOrder = [...order];
-                    const [movedItem] = newOrder.splice(evt.oldIndex, 1);
-                    newOrder.splice(evt.newIndex, 0, movedItem);
-                    setOrder(newOrder);
-                    saveState({ order: newOrder, tools });
+        if (loading) return;
+        const initSortable = (ref, type, setFunc) => {
+            if (!ref.current) return;
+            Sortable.create(ref.current, {
+                animation: 200,
+                delay: 200, // 長按 200ms 才啟動，避免捲動頁面時誤觸
+                delayOnTouchOnly: true,
+                ghostClass: 'sortable-ghost',
+                onEnd: () => {
+                    const newIds = Array.from(ref.current.children).map(el => el.dataset.id);
+                    setFunc(prev => {
+                        const next = newIds.map(id => prev.find(t => t.id === id)).filter(Boolean);
+                        // 避免同步執行造成的畫面閃爍，使用 setTimeout
+                        setTimeout(() => {
+                            if (type === 'ai') syncToFirebase(next, workflowTools, mediaTools);
+                            if (type === 'wf') syncToFirebase(aiTools, next, mediaTools);
+                            if (type === 'md') syncToFirebase(aiTools, workflowTools, next);
+                        }, 50);
+                        return next;
+                    });
                 }
             });
-        }
-
-        // 分類內部工具排序
-        order.forEach(type => {
-            const el = document.getElementById(`tool-grid-${type}`);
-            if (el) {
-                sortableRefs.current[type] = new Sortable(el, {
-                    group: 'tools',
-                    animation: 150,
-                    onEnd: (evt) => {
-                        const { from, to, oldIndex, newIndex } = evt;
-                        const fromType = from.id.replace('tool-grid-', '');
-                        const toType = to.id.replace('tool-grid-', '');
-                        
-                        const newTools = JSON.parse(JSON.stringify(tools));
-                        const [movedItem] = newTools[fromType].splice(oldIndex, 1);
-                        newTools[toType].splice(newIndex, 0, movedItem);
-                        
-                        setTools(newTools);
-                        saveState({ order, tools: newTools });
-                    }
-                });
-            }
-        });
-
-        return () => {
-            console.log("Cleaning up Sortable.js instances.");
-            Object.values(sortableRefs.current).forEach(instance => instance && instance.destroy());
         };
-    }, [loading, order, tools]); // 依賴 tools 確保跨區拖曳後能重新綁定
+        initSortable(aiRef, 'ai', setAiTools);
+        initSortable(workflowRef, 'wf', setWorkflowTools);
+        initSortable(mediaRef, 'md', setMediaTools);
+    }, [loading]);
 
-    // Lucide 圖標更新 effect
-    useEffect(() => {
-        if (!loading) {
-            console.log("Creating Lucide icons.");
-            lucide.createIcons();
-        }
-    }, [loading, tools, isEditing]);
+    // 更新圖示
+    useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [aiTools, workflowTools, mediaTools, loading]);
 
-    const saveState = (newState) => {
-        console.log("Saving state to Firebase:", newState);
-        db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(newState)
-            .catch(error => console.error("Error writing to Firebase: ", error));
+    // 管理功能
+    const handleAdd = (type) => {
+        const name = prompt("輸入新工具名稱:");
+        const url = prompt("輸入網址 (https://...):");
+        if (!name || !url) return;
+        const newTool = {
+            id: Date.now().toString(),
+            name, url, desc: "新增工具", icon: "external-link",
+            color: "bg-white border-stone-200 text-stone-600",
+            bgColor: "bg-white border-stone-200 text-stone-600"
+        };
+        if (type === 'ai') setAiTools(p => { const n = [...p, newTool]; syncToFirebase(n, workflowTools, mediaTools); return n; });
+        if (type === 'wf') setWorkflowTools(p => { const n = [...p, newTool]; syncToFirebase(aiTools, n, mediaTools); return n; });
+        if (type === 'md') setMediaTools(p => { const n = [...p, newTool]; syncToFirebase(aiTools, workflowTools, n); return n; });
     };
 
     const handleDelete = (type, id, e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (window.confirm('確定要刪除這個工具嗎？')) {
-            const newTools = { ...tools };
-            newTools[type] = newTools[type].filter(tool => tool.id !== id);
-            setTools(newTools);
-            saveState({ order, tools: newTools });
-        }
+        e.preventDefault(); e.stopPropagation();
+        if (!confirm("確定要刪除這個按鈕嗎？")) return;
+        if (type === 'ai') setAiTools(p => { const n = p.filter(t => t.id !== id); syncToFirebase(n, workflowTools, mediaTools); return n; });
+        if (type === 'wf') setWorkflowTools(p => { const n = p.filter(t => t.id !== id); syncToFirebase(aiTools, n, mediaTools); return n; });
+        if (type === 'md') setMediaTools(p => { const n = p.filter(t => t.id !== id); syncToFirebase(aiTools, workflowTools, n); return n; });
     };
 
-    const formatTime = (date) => {
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${hours}:${minutes}:${seconds}`;
-    };
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">LOADING...</div>;
 
-    const formatDate = (date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const dayOfWeek = ['日', '一', '二', '三', '四', '五', '六'][date.getDay()];
-        return `${year}.${month}.${day} 星期${dayOfWeek}`;
-    };
+    return (
+        <div className="min-h-screen bg-[#FDFCF5]">
+            {/* 1. Sticky Navigation Bar */}
+            <header className="sticky top-0 z-50 bg-[#FDFCF5]/90 backdrop-blur-md border-b border-stone-200">
+                <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+                    <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-9 h-9 bg-stone-800 rounded-xl flex items-center justify-center text-white shadow-lg cursor-pointer" onClick={() => window.scrollTo({top:0, behavior:'smooth'})}>
+                                <i data-lucide="zap" className="w-5 h-5"></i>
+                            </div>
+                            <div className="hidden sm:block">
+                                <h1 className="text-base font-bold text-stone-700 leading-none">Studio</h1>
+                                <p className="text-[9px] text-stone-400 font-bold uppercase tracking-widest mt-1">Workspace</p>
+                            </div>
+                        </div>
+                        {/* 導航選單 */}
+                        <nav className="flex items-center space-x-4 md:space-x-8 border-l border-stone-200 pl-6">
+                            <button onClick={() => scrollToSection('ai-sec')} className="text-[11px] font-black text-stone-400 hover:text-stone-800 uppercase tracking-tighter md:tracking-widest transition-colors">AI 思考</button>
+                            <button onClick={() => scrollToSection('wf-sec')} className="text-[11px] font-black text-stone-400 hover:text-stone-800 uppercase tracking-tighter md:tracking-widest transition-colors">生產力</button>
+                            <button onClick={() => scrollToSection('md-sec')} className="text-[11px] font-black text-stone-400 hover:text-stone-800 uppercase tracking-tighter md:tracking-widest transition-colors">影音媒體</button>
+                        </nav>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                        <div className="font-mono text-xs font-bold bg-white px-3 py-1.5 rounded-lg border border-stone-200 text-stone-500 shadow-sm">
+                            {currentTime.toLocaleTimeString('zh-TW', { hour12: false })}
+                        </div>
+                    </div>
+                </div>
+            </header>
 
-    if (loading || !tools || !order) {
-        return React.createElement('div', { className: 'flex items-center justify-center h-screen bg-slate-900 text-white text-xl' },
-            React.createElement('i', { 'data-lucide': 'loader-circle', className: 'w-8 h-8 mr-4 animate-spin' }),
-            'Loading Workspace...'
-        );
-    }
+            {/* 2. Main Content (增加手機左右間隔 px-8) */}
+            <main className="max-w-7xl mx-auto px-8 py-8 md:py-12">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                    
+                    {/* AI Section */}
+                    <div id="ai-sec" className="lg:col-span-8 scroll-mt-24">
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-xl font-bold text-stone-700 flex items-center gap-3">
+                                <span className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500"><i data-lucide="brain"></i></span>
+                                AI 思考工具
+                            </h2>
+                            <button onClick={() => handleAdd('ai')} className="w-8 h-8 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><i data-lucide="plus" className="w-4 h-4"></i></button>
+                        </div>
+                        <div ref={aiRef} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            {aiTools.map(tool => (
+                                <div key={tool.id} data-id={tool.id} className="group relative p-6 bg-white border border-stone-200 rounded-[2rem] hover:shadow-xl transition-all cursor-grab active:cursor-grabbing">
+                                    <button onClick={(e) => handleDelete('ai', tool.id, e)} className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-md z-20 transition-opacity"><i data-lucide="x" className="w-4 h-4"></i></button>
+                                    <div className="flex items-center gap-5">
+                                        <div className={`p-4 rounded-2xl ${tool.color} border shadow-inner`}><i data-lucide={tool.icon} className="w-6 h-6"></i></div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-stone-800 truncate text-lg">{tool.name}</h3>
+                                            <p className="text-stone-400 text-xs truncate font-medium">{tool.desc}</p>
+                                        </div>
+                                        <a href={tool.url} target="_blank" className="p-2 text-stone-300 hover:text-stone-600 transition-colors" onClick={(e) => e.stopPropagation()}><i data-lucide="arrow-up-right" className="w-6 h-6"></i></a>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
 
-    const renderTool = (tool, type) => {
-        const isSimple = ['workflow', 'design', 'media'].includes(type);
-        const commonProps = {
-            key: tool.id,
-            'data-id': tool.id,
-            className: "group relative cursor-grab"
-        };
+                    {/* Sidebar Sections */}
+                    <div className="lg:col-span-4 space-y-12">
+                        {/* Workflow */}
+                        <section id="wf-sec" className="scroll-mt-24">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-[12px] font-black text-stone-400 uppercase tracking-[0.2em] flex items-center gap-2"><i data-lucide="rocket" className="w-4 h-4"></i> 生產力</h2>
+                                <button onClick={() => handleAdd('wf')} className="text-stone-300 hover:text-stone-800"><i data-lucide="plus-circle" className="w-5 h-5"></i></button>
+                            </div>
+                            <div ref={workflowRef} className="grid grid-cols-2 gap-4">
+                                {workflowTools.map(tool => (
+                                    <div key={tool.id} data-id={tool.id} className="group relative">
+                                        <button onClick={(e) => handleDelete('wf', tool.id, e)} className="absolute -top-2 -right-2 z-20 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-sm transition-opacity"><i data-lucide="x" className="w-3 h-3"></i></button>
+                                        <a href={tool.url} target="_blank" className={`flex flex-col items-center justify-center p-5 ${tool.bgColor} border border-stone-100 rounded-[1.8rem] hover:shadow-lg transition-all h-28 text-center active:scale-95 group`}>
+                                            <i data-lucide={tool.icon} className="mb-3 w-5 h-5 group-hover:scale-110 transition-transform"></i>
+                                            <span className="text-[13px] font-bold leading-none">{tool.name}</span>
+                                        </a>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
 
-        const deleteButton = isEditing && React.createElement('button', {
-            onClick: (e) => handleDelete(type, tool.id, e),
-            className: "absolute -top-2 -right-2 z-20 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all hover:scale-110"
-        }, React.createElement('i', { 'data-lucide': 'x', className: 'w-4 h-4' }));
-
-        const linkClass = isSimple
-            ? `flex items-center justify-center p-4 h-full rounded-lg border transition-all group-hover:scale-105 group-hover:shadow-lg ${tool.bgColor}`
-            : `flex flex-col items-center p-3 text-center rounded-lg border transition-all group-hover:scale-105 group-hover:shadow-xl ${tool.color}`;
-
-        const linkContent = isSimple
-            ? [
-                React.createElement('i', { key: 'icon', 'data-lucide': tool.icon, className: 'w-6 h-6 mr-3' }),
-                React.createElement('span', { key: 'name', className: 'font-semibold' }, tool.name)
-            ]
-            : [
-                React.createElement('i', { key: 'icon', 'data-lucide': tool.icon, className: 'w-8 h-8 mb-2' }),
-                React.createElement('h3', { key: 'name', className: 'font-bold text-sm mb-1' }, tool.name),
-                React.createElement('p', { key: 'desc', className: 'text-xs opacity-70' }, tool.desc)
-            ];
-
-        return React.createElement('div', commonProps,
-            deleteButton,
-            React.createElement('a', { href: tool.url, target: '_blank', className: linkClass }, linkContent)
-        );
-    };
-
-    return React.createElement('div', { className: 'min-h-screen bg-slate-900 text-white p-4 md:p-8' },
-        React.createElement('header', { className: 'flex justify-between items-center mb-8' },
-            React.createElement('div', { className: 'text-left' },
-                React.createElement('h1', { className: 'text-5xl font-bold tracking-tighter' }, formatTime(currentTime)),
-                React.createElement('p', { className: 'text-slate-400' }, formatDate(currentTime))
-            ),
-            React.createElement('button', {
-                onClick: () => setIsEditing(!isEditing),
-                className: `px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${isEditing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-700 hover:bg-slate-600'}`
-            },
-                React.createElement('i', { 'data-lucide': isEditing ? 'check' : 'settings-2', className: 'w-4 h-4' }),
-                isEditing ? '完成管理' : '管理工具'
-            )
-        ),
-        React.createElement('main', { id: 'main-container', className: 'space-y-8' },
-            order.map(type => {
-                const category = tools[type];
-                if (!category || !Array.isArray(category)) return null;
-                const titleMap = { ai: 'AI Agents', workflow: 'Workflow & Dev', design: 'Design Resources', media: 'Media & Assets' };
-                const gridStyle = {
-                    ai: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
-                    workflow: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
-                    design: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
-                    media: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-                };
-
-                return React.createElement('section', { key: type, 'data-type': type, className: 'relative pt-4' },
-                    React.createElement('div', { className: 'drag-handle absolute -left-8 top-5 text-slate-500 cursor-move p-1' },
-                        React.createElement('i', { 'data-lucide': 'grip-vertical', className: 'w-5 h-5' })
-                    ),
-                    React.createElement('h2', { className: 'text-xl font-semibold mb-4 text-slate-300' }, titleMap[type]),
-                    React.createElement('div', { id: `tool-grid-${type}`, className: `grid gap-4 ${gridStyle[type]}` },
-                        category.map(tool => renderTool(tool, type))
-                    )
-                );
-            })
-        )
+                        {/* Media */}
+                        <section id="md-sec" className="scroll-mt-24">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-[12px] font-black text-stone-400 uppercase tracking-[0.2em] flex items-center gap-2"><i data-lucide="video" className="w-4 h-4"></i> 影音媒體</h2>
+                                <button onClick={() => handleAdd('md')} className="text-stone-300 hover:text-stone-800"><i data-lucide="plus-circle" className="w-5 h-5"></i></button>
+                            </div>
+                            <div ref={mediaRef} className="grid grid-cols-2 gap-4">
+                                {mediaTools.map(tool => (
+                                    <div key={tool.id} data-id={tool.id} className="group relative">
+                                        <button onClick={(e) => handleDelete('md', tool.id, e)} className="absolute -top-2 -right-2 z-20 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-sm transition-opacity"><i data-lucide="x" className="w-3 h-3"></i></button>
+                                        <a href={tool.url} target="_blank" className={`flex flex-col items-center justify-center p-5 ${tool.bgColor} border border-stone-100 rounded-[1.8rem] hover:shadow-lg transition-all h-28 text-center active:scale-95 group`}>
+                                            <i data-lucide={tool.icon} className="mb-3 w-5 h-5 group-hover:scale-110 transition-transform"></i>
+                                            <span className="text-[13px] font-bold leading-none">{tool.name}</span>
+                                        </a>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </main>
+            <footer className="text-center py-12 text-stone-300 text-[10px] font-black uppercase tracking-[0.3em]">
+                Beige Studio &bull; Creative Workflow 2025
+            </footer>
+        </div>
     );
 };
 
-// 5. 渲染 App
-ReactDOM.render(React.createElement(App), document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
