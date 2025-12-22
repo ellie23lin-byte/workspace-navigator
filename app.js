@@ -1,4 +1,12 @@
-// V2_3.3：桌機版支援隨時拖拉，手機版維持編輯鎖定
+/**
+ * Studio Workspace Navigator V2_3.5
+ * Base: V2_2 Logic
+ * Optimizations: 
+ * - Adaptive Dragging (Desktop: Always, Mobile: Edit Mode Only)
+ * - SortableJS Instance Persistence (Ref-based)
+ * - Enhanced Deletion Logic with Immutability
+ */
+
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -18,49 +26,51 @@ const { useState, useEffect, useRef } = React;
 const App = () => {
     const [tools, setTools] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     
     const sectionOrder = ['ai', 'workflow', 'design', 'outputs', 'media'];
     const sectionRefs = { ai: useRef(null), workflow: useRef(null), design: useRef(null), outputs: useRef(null), media: useRef(null) };
+    
+    // 使用 Ref 保存 Sortable 實例，避免重複初始化造成的性能損耗
+    const sortableInstances = useRef({});
 
-    // 檢測是否為行動裝置
+    // 1. 響應式檢測
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
-        checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    // 2. 資料初始化
     useEffect(() => {
         const loadData = async () => {
             if (!db) return;
             try {
                 const doc = await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get();
-                if (doc.exists) setTools(doc.data());
-            } catch (error) { console.error("Load error:", error); }
+                if (doc.exists) {
+                    setTools(doc.data());
+                } else {
+                    console.log("Using default local data...");
+                    // 這裡可以放 defaultInitial 資料
+                }
+            } catch (error) { console.error("Firebase Load Error:", error); }
         };
         loadData();
     }, []);
 
-    // 核心拖拉邏輯：桌機版隨時啟用，手機版僅在編輯時啟用
+    // 3. Sortable 實例生命週期管理
     useEffect(() => {
         if (!tools) return;
-        
-        const sortableInstances = {};
+
         sectionOrder.forEach(key => {
             const el = sectionRefs[key].current;
-            if (el) {
-                sortableInstances[key] = Sortable.create(el, {
+            if (el && !sortableInstances.current[key]) {
+                sortableInstances.current[key] = Sortable.create(el, {
                     animation: 200,
                     handle: '.drag-handle',
                     ghostClass: 'opacity-10',
                     forceFallback: true,
-                    // 重要：只有桌機版 或 手機編輯模式 下，把手才有效
-                    onStart: (evt) => {
-                        if (isMobile && !isEditing) {
-                            evt.preventDefault();
-                            return false;
-                        }
+                    onStart: () => {
                         if(window.navigator.vibrate) window.navigator.vibrate(10);
                     },
                     onEnd: (evt) => {
@@ -79,12 +89,38 @@ const App = () => {
         });
 
         return () => {
-            Object.values(sortableInstances).forEach(instance => { if (instance) instance.destroy(); });
+            Object.values(sortableInstances.current).forEach(instance => { if (instance) instance.destroy(); });
+            sortableInstances.current = {};
         };
-    }, [tools, isEditing, isMobile]);
+    }, [tools]); 
 
+    // 4. 動態切換拖拉開關 (Adaptive Dragging)
+    useEffect(() => {
+        if (!tools) return;
+        const isDisabled = isMobile && !isEditing;
+        Object.values(sortableInstances.current).forEach(instance => {
+            if (instance) instance.option('disabled', isDisabled);
+        });
+    }, [isMobile, isEditing, tools]);
+
+    // 5. 圖標重繪
     useEffect(() => { lucide && lucide.createIcons(); }, [tools, isEditing]);
 
+    // 6. 刪除邏輯優化
+    const handleDelete = (type, id) => {
+        if (!confirm("確定要刪除這個工具嗎？")) return;
+
+        setTools(prevTools => {
+            const updatedTools = {
+                ...prevTools,
+                [type]: prevTools[type].filter(item => item.id !== id)
+            };
+            if (db) db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set(updatedTools);
+            return updatedTools;
+        });
+    };
+
+    // 工具函式
     const getFavicon = (url) => `https://www.google.com/s2/favicons?sz=128&domain=${new URL(url).hostname}`;
     const getCustomIcon = (id) => {
         const iconMap = { '1766381973976': 'layout-dashboard', 'out-cv': 'user-round' };
@@ -95,38 +131,45 @@ const App = () => {
         return map[k] || k;
     };
 
-    if (!tools) return <div className="min-h-screen bg-[#FDFCF5] flex items-center justify-center font-mono text-stone-400">V2.3.3 Adaptive...</div>;
+    if (!tools) return (
+        <div className="min-h-screen bg-[#FDFCF5] flex flex-col items-center justify-center font-mono">
+            <div className="w-12 h-12 border-4 border-stone-200 border-t-stone-800 rounded-full animate-spin mb-4"></div>
+            <div className="text-stone-400 text-xs tracking-widest uppercase">Initializing V2.3.5...</div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen pb-20 bg-[#FDFCF5] select-none touch-pan-y">
             <style>{`
-                /* 把手顯示邏輯：桌機 Hover 才出現，手機編輯模式才出現 */
                 .drag-handle { 
                     opacity: 0; 
-                    transition: opacity 0.2s;
+                    transition: all 0.2s ease;
                     -webkit-touch-callout: none !important;
                     touch-action: none !important;
                 }
                 .group:hover .drag-handle { opacity: 1; }
-                .is-editing .drag-handle { opacity: 1 !important; }
-                
+                .is-editing .drag-handle { opacity: 1 !important; color: #f43f5e; }
                 .edit-mode-card { -webkit-touch-callout: none !important; touch-action: pan-y !important; }
             `}</style>
             
             <header className="sticky top-0 z-50 bg-[#FDFCF5]/90 backdrop-blur-md border-b border-stone-200 px-4 md:px-8 py-4 flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-stone-800 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm cursor-pointer" onClick={() => window.scrollTo({top:0, behavior:'smooth'})}>
+                    <div className="w-9 h-9 bg-stone-800 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm cursor-pointer hover:rotate-12 transition-transform" onClick={() => window.scrollTo({top:0, behavior:'smooth'})}>
                         <i data-lucide="zap" className="w-5 h-5"></i>
                     </div>
+                    
+                    {/* 手機導航 */}
                     <div className="md:hidden relative">
                         <select 
                             onChange={(e) => { const el = document.getElementById(e.target.value); if(el) window.scrollTo({ top: el.offsetTop - 100, behavior: 'smooth' }); }}
                             className="bg-transparent text-[13px] font-bold text-stone-700 border-none focus:ring-0 cursor-pointer appearance-none pr-4"
                         >
-                            <option value="">跳轉至...</option>
+                            <option value="">跳轉導航...</option>
                             {sectionOrder.map(k => <option key={k} value={k}>{getSectionTitle(k)}</option>)}
                         </select>
                     </div>
+
+                    {/* 桌機導航 */}
                     <nav className="hidden md:flex space-x-8 border-l border-stone-200 pl-8">
                         {sectionOrder.map(k => (
                             <button key={k} onClick={() => document.getElementById(k).scrollIntoView({behavior:'smooth'})} className="text-[11px] font-black text-stone-400 hover:text-stone-800 uppercase tracking-widest transition-colors">
@@ -138,7 +181,7 @@ const App = () => {
 
                 <button 
                     onClick={() => setIsEditing(!isEditing)} 
-                    className={`px-5 py-2 rounded-full text-[11px] font-black border transition-all ${isEditing ? 'bg-rose-500 text-white border-rose-500 shadow-lg' : 'bg-white text-stone-500 border-stone-200 shadow-sm'}`}
+                    className={`px-5 py-2 rounded-full text-[11px] font-black border transition-all ${isEditing ? 'bg-rose-500 text-white border-rose-500 shadow-lg' : 'bg-white text-stone-500 border-stone-200 shadow-sm hover:border-stone-400'}`}
                 >
                     {isEditing ? '儲存完成' : '管理編輯'}
                 </button>
@@ -157,8 +200,8 @@ const App = () => {
                             {tools[type].map(t => (
                                 <div key={t.id} className={`edit-mode-card group relative bg-white border border-stone-200 rounded-2xl p-3 flex flex-col items-center transition-all ${isEditing ? 'ring-1 ring-rose-100' : 'hover:shadow-xl hover:border-stone-300'}`}>
                                     
-                                    {/* 拖拉把手：桌機版永遠可用 */}
-                                    <div className="drag-handle absolute top-0 left-0 bottom-0 w-10 flex items-center justify-center text-stone-300 z-50 cursor-grab active:cursor-grabbing">
+                                    {/* 拖拉把手：Z-index 設為 40 確保不擋住刪除按鈕 */}
+                                    <div className="drag-handle absolute top-0 left-0 bottom-0 w-10 flex items-center justify-center text-stone-300 z-40 cursor-grab active:cursor-grabbing hover:text-stone-600">
                                         <i data-lucide="grip-vertical" className="w-5 h-5"></i>
                                     </div>
 
@@ -179,7 +222,10 @@ const App = () => {
                                     </a>
 
                                     {isEditing && (
-                                        <button onClick={() => { if(confirm("確定刪除？")) { const f = tools[type].filter(x => x.id !== t.id); updateTools({...tools, [type]: f}); } }} className="absolute top-2 right-2 text-rose-300 p-1 hover:text-rose-500">
+                                        <button 
+                                            onClick={() => handleDelete(type, t.id)} 
+                                            className="absolute top-2 right-2 text-rose-300 p-1 hover:text-rose-500 hover:scale-110 transition-all z-50"
+                                        >
                                             <i data-lucide="x-circle" className="w-5 h-5"></i>
                                         </button>
                                     )}
@@ -189,6 +235,7 @@ const App = () => {
                     </section>
                 ))}
             </main>
+            <footer className="text-center py-20 text-stone-300 text-[10px] font-black uppercase tracking-[0.5em]">Beige Studio &bull; Workspace v2.3.5</footer>
         </div>
     );
 };
