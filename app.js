@@ -13,7 +13,7 @@ const db = firebase.firestore();
 db.settings({ experimentalForceLongPolling: true });
 
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v16_final_fix'; 
+const DOCUMENT_ID = 'user_tool_order_v17_final_v2'; 
 
 const { useState, useEffect, useRef } = React;
 
@@ -26,13 +26,13 @@ const App = () => {
     const [mediaTools, setMediaTools] = useState([]);
     const [outputs, setOutputs] = useState([]);
 
-    const aiRef = useRef(null);
-    const workflowRef = useRef(null);
-    const mediaRef = useRef(null);
-    const outputsRef = useRef(null);
+    const containerRefs = {
+        ai: useRef(null),
+        workflow: useRef(null),
+        media: useRef(null),
+        outputs: useRef(null)
+    };
     
-    // 儲存 Sortable 實例的 Ref，用來銷毀舊實例
-    const sortableInstances = useRef({});
     const stateRef = useRef({ ai: [], workflow: [], media: [], outputs: [] });
 
     const initialData = {
@@ -84,9 +84,7 @@ const App = () => {
         try {
             const domain = new URL(url).hostname;
             return `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
-        } catch (e) {
-            return `https://www.google.com/s2/favicons?sz=64&domain=google.com`;
-        }
+        } catch (e) { return `https://www.google.com/s2/favicons?sz=64&domain=google.com`; }
     };
 
     const syncToFirebase = (ai, wf, md, out) => {
@@ -114,47 +112,38 @@ const App = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // 關鍵修復：管理 Sortable 實例，避免重複掛載
+    // 關鍵修復：嚴格控制 Sortable 初始化與數據同步
     useEffect(() => {
         if (loading) return;
-        const init = (el, setFunc, type) => {
+        const initSortable = (type) => {
+            const el = containerRefs[type].current;
             if (!el) return;
-            // 如果該區塊已有實例，先銷毀它
-            if (sortableInstances.current[type]) {
-                sortableInstances.current[type].destroy();
-            }
-            sortableInstances.current[type] = Sortable.create(el, {
-                animation: 250, delay: 200, delayOnTouchOnly: true, ghostClass: 'sortable-ghost',
-                onEnd: (evt) => {
+            Sortable.create(el, {
+                animation: 200, delay: 150, delayOnTouchOnly: true, ghostClass: 'sortable-ghost',
+                onUpdate: (evt) => {
                     const newIds = Array.from(el.children).map(child => child.dataset.id);
+                    // 數據去重：確保 ID 唯一
+                    const uniqueIds = [...new Set(newIds)];
                     const currentList = stateRef.current[type];
-                    const sortedList = newIds.map(id => currentList.find(t => t.id === id)).filter(Boolean);
+                    const sortedList = uniqueIds.map(id => currentList.find(t => t.id === id)).filter(Boolean);
                     
-                    // 強制還原 DOM 狀態，讓 React 重新繪製真實順序
-                    const itemEl = evt.item;
-                    itemEl.parentNode.removeChild(itemEl);
-                    if (evt.oldIndex < el.children.length) el.insertBefore(itemEl, el.children[evt.oldIndex]);
-                    else el.appendChild(itemEl);
+                    // 更新狀態
+                    if (type === 'ai') setAiTools(sortedList);
+                    else if (type === 'workflow') setWorkflowTools(sortedList);
+                    else if (type === 'media') setMediaTools(sortedList);
+                    else if (type === 'outputs') setOutputs(sortedList);
 
-                    setFunc(sortedList);
+                    // 異步同步至 Firebase
                     setTimeout(() => {
                         const s = stateRef.current;
                         syncToFirebase(s.ai, s.workflow, s.media, s.outputs);
-                    }, 50);
+                    }, 100);
                 }
             });
         };
 
-        init(aiRef.current, setAiTools, 'ai');
-        init(workflowRef.current, setWorkflowTools, 'workflow');
-        init(mediaRef.current, setMediaTools, 'media');
-        init(outputsRef.current, setOutputs, 'outputs');
-
-        // 組件卸載時銷毀所有實例
-        return () => {
-            Object.values(sortableInstances.current).forEach(ins => ins && ins.destroy());
-        };
-    }, [loading]); // 僅在初始加載完成後執行一次
+        ['ai', 'workflow', 'media', 'outputs'].forEach(type => initSortable(type));
+    }, [loading]);
 
     useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [loading, aiTools, workflowTools, mediaTools, outputs]);
 
@@ -164,24 +153,24 @@ const App = () => {
         if (!name || !url) return;
         const newTool = { id: Date.now().toString(), name, url, color: "bg-white", desc: "Tool", icon: "sparkles" };
         if (type === 'ai') setAiTools(p => [...p, newTool]);
-        if (type === 'wf') setWorkflowTools(p => [...p, newTool]);
-        if (type === 'md') setMediaTools(p => [...p, newTool]);
-        if (type === 'out') setOutputs(p => [...p, newTool]);
-        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 200);
+        else if (type === 'wf') setWorkflowTools(p => [...p, newTool]);
+        else if (type === 'md') setMediaTools(p => [...p, newTool]);
+        else if (type === 'out') setOutputs(p => [...p, newTool]);
+        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 300);
     };
 
     const handleDelete = (type, id, e) => {
         e.preventDefault(); e.stopPropagation();
         if (!confirm("確定刪除？")) return;
         if (type === 'ai') setAiTools(p => p.filter(t => t.id !== id));
-        if (type === 'wf') setWorkflowTools(p => p.filter(t => t.id !== id));
-        if (type === 'md') setMediaTools(p => p.filter(t => t.id !== id));
-        if (type === 'out') setOutputs(p => p.filter(t => t.id !== id));
-        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 200);
+        else if (type === 'wf') setWorkflowTools(p => p.filter(t => t.id !== id));
+        else if (type === 'md') setMediaTools(p => p.filter(t => t.id !== id));
+        else if (type === 'out') setOutputs(p => p.filter(t => t.id !== id));
+        setTimeout(() => syncToFirebase(stateRef.current.ai, stateRef.current.workflow, stateRef.current.media, stateRef.current.outputs), 300);
     };
 
     const ToolButton = ({ tool, type, useLucide = false }) => (
-        <div data-id={tool.id} className="group relative bg-white border border-stone-200 rounded-2xl p-3 hover:shadow-xl transition-all cursor-grab active:cursor-grabbing">
+        <div key={tool.id} data-id={tool.id} className="group relative bg-white border border-stone-200 rounded-2xl p-3 hover:shadow-xl transition-all cursor-grab active:cursor-grabbing">
             <button onClick={(e) => handleDelete(type, tool.id, e)} className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center z-20 shadow-lg"><i data-lucide="x" className="w-3 h-3"></i></button>
             <a href={tool.url} target="_blank" className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                 <div className={`w-10 h-10 shrink-0 rounded-xl ${tool.color} flex items-center justify-center border border-stone-100 shadow-sm overflow-hidden p-1.5`}>
@@ -195,7 +184,7 @@ const App = () => {
         </div>
     );
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">FINALIZING WORKSPACE...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">STABILIZING SYSTEM...</div>;
 
     return (
         <div className="min-h-screen bg-[#FDFCF5]">
@@ -218,16 +207,16 @@ const App = () => {
 
             <main className="max-w-[1600px] mx-auto px-10 py-12 space-y-16">
                 <section id="ai-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="brain"></i> AI Intelligence</h2><button onClick={()=>handleAdd('ai')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
-                    <div ref={aiRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{aiTools.map(t=><ToolButton key={t.id} tool={t} type="ai"/>)}</div>
+                    <div ref={containerRefs.ai} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{aiTools.map(t=><ToolButton key={t.id} tool={t} type="ai"/>)}</div>
                 </section>
                 <section id="wf-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="rocket"></i> Workflow Automation</h2><button onClick={()=>handleAdd('wf')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
-                    <div ref={workflowRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{workflowTools.map(t=><ToolButton key={t.id} tool={t} type="wf"/>)}</div>
+                    <div ref={containerRefs.workflow} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{workflowTools.map(t=><ToolButton key={t.id} tool={t} type="wf"/>)}</div>
                 </section>
                 <section id="md-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="video"></i> Creative Media</h2><button onClick={()=>handleAdd('md')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
-                    <div ref={mediaRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{mediaTools.map(t=><ToolButton key={t.id} tool={t} type="md"/>)}</div>
+                    <div ref={containerRefs.media} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{mediaTools.map(t=><ToolButton key={t.id} tool={t} type="md"/>)}</div>
                 </section>
                 <section id="out-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="folder-kanban"></i> My Outputs</h2><button onClick={()=>handleAdd('out')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
-                    <div ref={outputsRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{outputs.map(t=><ToolButton key={t.id} tool={t} type="out" useLucide={true}/>)}</div>
+                    <div ref={containerRefs.outputs} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{outputs.map(t=><ToolButton key={t.id} tool={t} type="out" useLucide={true}/>)}</div>
                 </section>
             </main>
             <footer className="text-center py-24 text-stone-300 text-[10px] font-black uppercase tracking-[0.5em]">Beige Studio &bull; Creative Workspace 2025</footer>
