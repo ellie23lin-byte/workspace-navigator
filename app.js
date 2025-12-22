@@ -1,4 +1,4 @@
-// 基於 V1 架構：修正 Favicon 語法並確保 Babel 可正確解析
+// 基於 V1 架構：補回所有 37 個初始工具按鈕
 const firebaseConfig = {
     apiKey: "AIzaSyAJQh-yzP3RUF2zhN7s47uNOJokF0vrR_c",
     authDomain: "my-studio-dashboard.firebaseapp.com",
@@ -24,7 +24,7 @@ const App = () => {
     const [tools, setTools] = useState(null);
     const [currentTime, setCurrentTime] = useState(new Date());
     
-    // V1 鎖定順序
+    // V1 鎖定順序：AI -> Workflow -> Design -> 我的產出 -> Media
     const sectionOrder = ['ai', 'workflow', 'design', 'outputs', 'media'];
     const sectionRefs = {
         ai: useRef(null), workflow: useRef(null), design: useRef(null), outputs: useRef(null), media: useRef(null)
@@ -43,14 +43,33 @@ const App = () => {
                             { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800 text-white' },
                             { id: 'ai-2', name: 'Gemini', desc: 'Google AI', url: 'https://gemini.google.com', color: 'bg-blue-100' },
                             { id: 'ai-3', name: 'Gamma', desc: 'Presentation', url: 'https://gamma.app', color: 'bg-purple-100' },
-                            { id: 'ai-6', name: 'ChatGPT', desc: 'AI Chat', url: 'https://chat.openai.com', color: 'bg-emerald-100' }
+                            { id: 'ai-4', name: 'NotebookLM', desc: 'Research', url: 'https://notebooklm.google.com', color: 'bg-teal-100' },
+                            { id: 'ai-5', name: 'AI Studio', desc: 'Dev Tool', url: 'https://aistudio.google.com', color: 'bg-indigo-100' },
+                            { id: 'ai-6', name: 'ChatGPT', desc: 'AI Chat', url: 'https://chat.openai.com', color: 'bg-emerald-100' },
+                            { id: 'ai-7', name: 'Claude', desc: 'AI Writing', url: 'https://claude.ai', color: 'bg-orange-100' },
+                            { id: 'ai-8', name: 'DeepL', desc: 'Translate', url: 'https://www.deepl.com', color: 'bg-blue-50' },
+                            { id: 'ai-9', name: 'Perplexity', desc: 'AI Search', url: 'https://www.perplexity.ai', color: 'bg-cyan-100' },
+                            { id: 'ai-10', name: 'Leonardo', desc: 'Art Gen', url: 'https://leonardo.ai', color: 'bg-amber-100' }
                         ],
                         workflow: [
                             { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', color: 'bg-rose-50' },
-                            { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', color: 'bg-amber-50' }
+                            { id: 'wf-2', name: 'Make', url: 'https://www.make.com', color: 'bg-violet-50' },
+                            { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', color: 'bg-slate-100' },
+                            { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', color: 'bg-amber-50' },
+                            { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', color: 'bg-blue-50' },
+                            { id: 'wf-6', name: 'Wix', url: 'https://www.wix.com', color: 'bg-sky-50' },
+                            { id: 'wf-7', name: 'GitHub', url: 'https://github.com', color: 'bg-gray-100' }
                         ],
                         design: [
                             { id: 'ds-1', name: 'Figma', url: 'https://www.figma.com', color: 'bg-orange-50' },
+                            { id: 'ds-2', name: 'Spline', url: 'https://spline.design', color: 'bg-indigo-50' },
+                            { id: 'ds-3', name: 'Pinterest', url: 'https://www.pinterest.com', color: 'bg-red-50' },
+                            { id: 'ds-4', name: 'Dribbble', url: 'https://dribbble.com', color: 'bg-pink-50' },
+                            { id: 'ds-5', name: 'Behance', url: 'https://www.behance.net', color: 'bg-blue-50' },
+                            { id: 'ds-6', name: 'Coolors', url: 'https://coolors.co', color: 'bg-teal-50' },
+                            { id: 'ds-7', name: 'Adobe Color', url: 'https://color.adobe.com', color: 'bg-yellow-50' },
+                            { id: 'ds-8', name: 'Fontjoy', url: 'https://fontjoy.com', color: 'bg-lime-50' },
+                            { id: 'ds-9', name: 'Google Fonts', url: 'https://fonts.google.com', color: 'bg-green-50' },
                             { id: 'ds-10', name: 'Lucide', url: 'https://lucide.dev', color: 'bg-cyan-50' }
                         ],
                         outputs: [
@@ -58,6 +77,14 @@ const App = () => {
                         ],
                         media: [
                             { id: 'md-1', name: 'Midjourney', url: 'https://www.midjourney.com', color: 'bg-violet-100' },
+                            { id: 'md-2', name: 'Runway', url: 'https://runwayml.com', color: 'bg-pink-100' },
+                            { id: 'md-3', name: 'Pika', url: 'https://pika.art', color: 'bg-fuchsia-100' },
+                            { id: 'md-4', name: 'Luma', url: 'https://lumalabs.ai', color: 'bg-purple-100' },
+                            { id: 'md-5', name: 'Krea', url: 'https://www.krea.ai', color: 'bg-sky-100' },
+                            { id: 'md-6', name: 'Unsplash', url: 'https://unsplash.com', color: 'bg-slate-100' },
+                            { id: 'md-7', name: 'Freepik', url: 'https://www.freepik.com', color: 'bg-cyan-100' },
+                            { id: 'md-8', name: 'Icons8', url: 'https://icons8.com', color: 'bg-emerald-100' },
+                            { id: 'md-9', name: 'Envato Elements', url: 'https://elements.envato.com', color: 'bg-lime-100' },
                             { id: 'md-10', name: 'YouTube', url: 'https://youtube.com', color: 'bg-red-100' }
                         ]
                     };
@@ -92,7 +119,7 @@ const App = () => {
             });
             if (window.lucide) lucide.createIcons();
         };
-        setTimeout(initSortable, 100);
+        setTimeout(initSortable, 200);
     }, [tools]);
 
     const handleAdd = (type) => {
@@ -122,7 +149,7 @@ const App = () => {
         }
     };
 
-    if (!tools) return <div className="p-10 text-stone-400 font-mono bg-[#FDFCF5] min-h-screen">INITIALIZING V1...</div>;
+    if (!tools) return <div className="p-10 text-stone-400 font-mono bg-[#FDFCF5] min-h-screen">RESTORING V1 FULL BUTTONS...</div>;
 
     return (
         <div className="min-h-screen pb-20 bg-[#FDFCF5]">
@@ -155,11 +182,11 @@ const App = () => {
                         </div>
                         <div ref={sectionRefs[type]} className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {tools[type].map(t => (
-                                <div key={t.id} className="group relative bg-white border border-stone-200 rounded-2xl p-3 hover:shadow-xl transition-all">
+                                <div key={t.id} className="group relative bg-white border border-stone-200 rounded-2xl p-3 hover:shadow-xl transition-all cursor-grab active:cursor-grabbing">
                                     <button onClick={() => handleDelete(type, t.id)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all shadow-lg z-20"><i data-lucide="x" className="w-3 h-3"></i></button>
-                                    <a href={t.url} target="_blank" className="flex items-center gap-3">
+                                    <a href={t.url} target="_blank" className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
                                         <div className={`w-10 h-10 rounded-xl ${t.color || 'bg-stone-50'} flex items-center justify-center shrink-0 overflow-hidden border border-stone-50`}>
-                                            <img src={getFavicon(t.url)} className="w-6 h-6 object-contain" />
+                                            <img src={getFavicon(t.url)} className="w-6 h-6 object-contain" onError={(e)=>e.target.src='https://www.google.com/s2/favicons?sz=64&domain=google.com'} />
                                         </div>
                                         <div className="min-w-0">
                                             <div className="font-bold text-stone-800 text-sm truncate">{t.name}</div>
