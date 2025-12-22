@@ -13,13 +13,58 @@ const db = firebase.firestore();
 db.settings({ experimentalForceLongPolling: true });
 
 const COLLECTION_NAME = 'workspace_navigator_states';
-const DOCUMENT_ID = 'user_tool_order_v12_fixed'; 
+const DOCUMENT_ID = 'user_tool_order_v15_full_restore'; 
 
 const { useState, useEffect, useRef } = React;
 
 const App = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [loading, setLoading] = useState(true);
+
+    const initialData = {
+        ai: [
+            { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800' },
+            { id: 'ai-2', name: 'Gemini', desc: 'Google AI', url: 'https://gemini.google.com', color: 'bg-blue-50' },
+            { id: 'ai-6', name: 'ChatGPT', desc: 'OpenAI', url: 'https://chat.openai.com', color: 'bg-emerald-50' },
+            { id: 'ai-7', name: 'Claude', desc: 'Anthropic', url: 'https://claude.ai', color: 'bg-orange-50' },
+            { id: 'ai-9', name: 'Perplexity', desc: 'Search AI', url: 'https://www.perplexity.ai', color: 'bg-cyan-50' },
+            { id: 'ai-3', name: 'Gamma', desc: 'AI PPT', url: 'https://gamma.app', color: 'bg-purple-50' },
+            { id: 'ai-4', name: 'NotebookLM', desc: 'AI Notes', url: 'https://notebooklm.google.com', color: 'bg-teal-50' },
+            { id: 'ai-11', name: 'v0.dev', desc: 'Vercel UI', url: 'https://v0.dev', color: 'bg-zinc-50' },
+            { id: 'ai-12', name: 'Kimi', desc: 'Long Text', url: 'https://kimi.moonshot.cn', color: 'bg-green-50' },
+            { id: 'ai-10', name: 'Leonardo', desc: 'AI Image', url: 'https://leonardo.ai', color: 'bg-amber-50' },
+            { id: 'ai-5', name: 'AI Studio', desc: 'Google Dev', url: 'https://aistudio.google.com', color: 'bg-indigo-50' },
+            { id: 'ai-8', name: 'DeepL', desc: 'AI Trans', url: 'https://www.deepl.com', color: 'bg-blue-50' },
+        ],
+        workflow: [
+            { id: 'wf-1', name: 'n8n', url: 'https://n8n.io', color: 'bg-rose-50' },
+            { id: 'wf-2', name: 'Make', url: 'https://www.make.com', color: 'bg-violet-50' },
+            { id: 'wf-12', name: 'Lucide Icons', url: 'https://lucide.dev/icons', color: 'bg-amber-50' },
+            { id: 'wf-11', name: 'Firebase', url: 'https://console.firebase.google.com', color: 'bg-orange-50' },
+            { id: 'wf-9', name: 'Linear', url: 'https://linear.app', color: 'bg-indigo-50' },
+            { id: 'wf-7', name: 'Notion', url: 'https://www.notion.so', color: 'bg-stone-50' },
+            { id: 'wf-8', name: 'GitHub', url: 'https://github.com', color: 'bg-slate-50' },
+            { id: 'wf-3', name: 'Vercel', url: 'https://vercel.com', color: 'bg-zinc-50' },
+            { id: 'wf-5', name: 'Wix Studio', url: 'https://www.wix.com/studio', color: 'bg-blue-50' },
+            { id: 'wf-6', name: 'Wix', url: 'https://www.wix.com', color: 'bg-sky-50' },
+            { id: 'wf-4', name: 'GAS', url: 'https://script.google.com', color: 'bg-amber-50' },
+            { id: 'wf-10', name: 'Arc Boost', url: 'https://arc.net', color: 'bg-orange-50' },
+        ],
+        media: [
+            { id: 'md-1', name: 'CapCut', url: 'https://www.capcut.com', color: 'bg-cyan-50' },
+            { id: 'md-7', name: 'Luma AI', url: 'https://lumalabs.ai', color: 'bg-purple-50' },
+            { id: 'md-2', name: 'Canva', url: 'https://www.canva.com', color: 'bg-fuchsia-50' },
+            { id: 'md-8', name: 'ElevenLabs', url: 'https://elevenlabs.io', color: 'bg-yellow-50' },
+            { id: 'md-6', name: 'Suno', url: 'https://suno.com', color: 'bg-orange-50' },
+            { id: 'md-3', name: 'Remove.bg', url: 'https://www.remove.bg', color: 'bg-lime-50' },
+            { id: 'md-4', name: 'Stable Audio', url: 'https://stableaudio.com', color: 'bg-indigo-50' },
+            { id: 'md-5', name: 'Soundtrap', url: 'https://www.soundtrap.com', color: 'bg-rose-50' },
+        ],
+        outputs: [
+            { id: 'out-1', name: '工作導航儀', desc: 'Workspace', url: 'https://petitns-space.github.io/workspace-navigator/', color: 'bg-stone-800 text-white', icon: 'palette' },
+            { id: 'out-2', name: '我的 Web CV', desc: 'Portfolio', url: 'https://my-project-topaz-tau.vercel.app/', color: 'bg-rose-100 text-rose-600', icon: 'heart' },
+        ]
+    };
 
     const [aiTools, setAiTools] = useState([]);
     const [workflowTools, setWorkflowTools] = useState([]);
@@ -30,6 +75,7 @@ const App = () => {
     const workflowRef = useRef(null);
     const mediaRef = useRef(null);
     const outputsRef = useRef(null);
+    const stateRef = useRef({ ai: [], workflow: [], media: [], outputs: [] });
 
     const getLogo = (url) => {
         try {
@@ -47,8 +93,6 @@ const App = () => {
         }).catch(err => console.error("Sync Error:", err));
     };
 
-    // 核心修復：使用最新的 State 引用進行同步
-    const stateRef = useRef({ ai: [], workflow: [], media: [], outputs: [] });
     useEffect(() => {
         stateRef.current = { ai: aiTools, workflow: workflowTools, media: mediaTools, outputs: outputs };
     }, [aiTools, workflowTools, mediaTools, outputs]);
@@ -59,27 +103,7 @@ const App = () => {
                 const d = doc.data();
                 setAiTools(d.ai); setWorkflowTools(d.workflow); setMediaTools(d.media); setOutputs(d.outputs || []);
             } else {
-                // 若 Firebase 沒資料，載入初始預設 (省略部分清單以簡潔，實際運行時會載入)
-                const initial = {
-                    ai: [
-                        { id: 'ai-1', name: 'Manus', desc: 'AI Agent', url: 'https://manus.ai', color: 'bg-stone-800' },
-                        { id: 'ai-2', name: 'Gemini', desc: 'Google AI', url: 'https://gemini.google.com', color: 'bg-blue-50' },
-                        { id: 'ai-6', name: 'ChatGPT', desc: 'OpenAI', url: 'https://chat.openai.com', color: 'bg-emerald-50' },
-                        { id: 'ai-7', name: 'Claude', desc: 'Anthropic', url: 'https://claude.ai', color: 'bg-orange-50' }
-                    ],
-                    workflow: [
-                        { id: 'wf-11', name: 'Firebase', url: 'https://console.firebase.google.com', color: 'bg-orange-50' },
-                        { id: 'wf-12', name: 'Lucide Icons', url: 'https://lucide.dev/icons', color: 'bg-amber-50' }
-                    ],
-                    media: [
-                        { id: 'md-1', name: 'CapCut', url: 'https://www.capcut.com', color: 'bg-cyan-50' }
-                    ],
-                    outputs: [
-                        { id: 'out-1', name: '工作導航儀', desc: 'Workspace', url: '#', color: 'bg-stone-800 text-white', icon: 'palette' },
-                        { id: 'out-2', name: '我的 Web CV', desc: 'Portfolio', url: 'https://my-project-topaz-tau.vercel.app/', color: 'bg-rose-100 text-rose-600', icon: 'heart' }
-                    ]
-                };
-                setAiTools(initial.ai); setWorkflowTools(initial.workflow); setMediaTools(initial.media); setOutputs(initial.outputs);
+                setAiTools(initialData.ai); setWorkflowTools(initialData.workflow); setMediaTools(initialData.media); setOutputs(initialData.outputs);
             }
             setLoading(false);
         }).catch(() => setLoading(false));
@@ -87,50 +111,35 @@ const App = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // 核心修復：防止重複生成的 Sortable 配置
     useEffect(() => {
         if (loading) return;
-        const createSortable = (el, list, setFunc, type) => {
+        const createSortable = (el, setFunc, type) => {
             if (!el) return;
             Sortable.create(el, {
-                animation: 250,
-                delay: 200,
-                delayOnTouchOnly: true,
-                ghostClass: 'sortable-ghost',
+                animation: 250, delay: 200, delayOnTouchOnly: true, ghostClass: 'sortable-ghost',
                 onEnd: (evt) => {
-                    // 1. 獲取拖拽後的真實 DOM ID 順序
                     const newIds = Array.from(el.children).map(child => child.dataset.id);
-                    
-                    // 2. 獲取當前最新的數據源
                     const currentList = stateRef.current[type];
                     const sortedList = newIds.map(id => currentList.find(t => t.id === id)).filter(Boolean);
                     
-                    // 3. 核心：手動強制把 DOM 移回原位，讓 React 接手渲染，避免重複
                     const itemEl = evt.item;
                     itemEl.parentNode.removeChild(itemEl);
-                    if (evt.oldIndex < el.children.length) {
-                        el.insertBefore(itemEl, el.children[evt.oldIndex]);
-                    } else {
-                        el.appendChild(itemEl);
-                    }
+                    if (evt.oldIndex < el.children.length) el.insertBefore(itemEl, el.children[evt.oldIndex]);
+                    else el.appendChild(itemEl);
 
-                    // 4. 更新狀態
                     setFunc(sortedList);
-                    
-                    // 5. 同步 Firebase
                     setTimeout(() => {
-                        const { ai, workflow, media, outputs } = stateRef.current;
-                        syncToFirebase(ai, workflow, media, outputs);
+                        const s = stateRef.current;
+                        syncToFirebase(s.ai, s.workflow, s.media, s.outputs);
                     }, 50);
                 }
             });
         };
-
-        createSortable(aiRef.current, aiTools, setAiTools, 'ai');
-        createSortable(workflowRef.current, workflowTools, setWorkflowTools, 'workflow');
-        createSortable(mediaRef.current, mediaTools, setMediaTools, 'media');
-        createSortable(outputsRef.current, outputs, setOutputs, 'outputs');
-    }, [loading]); // 僅在加載完成後初始化一次
+        createSortable(aiRef.current, setAiTools, 'ai');
+        createSortable(workflowRef.current, setWorkflowTools, 'workflow');
+        createSortable(mediaRef.current, setMediaTools, 'media');
+        createSortable(outputsRef.current, setOutputs, 'outputs');
+    }, [loading]);
 
     useEffect(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, [loading, aiTools, workflowTools, mediaTools, outputs]);
 
@@ -158,7 +167,7 @@ const App = () => {
 
     const ToolButton = ({ tool, type, useLucide = false }) => (
         <div data-id={tool.id} className="group relative bg-white border border-stone-200 rounded-2xl p-3 hover:shadow-xl transition-all cursor-grab active:cursor-grabbing">
-            <button onClick={(e) => handleDelete(type, tool.id, e)} className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center z-20 shadow-lg transition-opacity"><i data-lucide="x" className="w-3 h-3"></i></button>
+            <button onClick={(e) => handleDelete(type, tool.id, e)} className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center z-20 shadow-lg"><i data-lucide="x" className="w-3 h-3"></i></button>
             <a href={tool.url} target="_blank" className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                 <div className={`w-10 h-10 shrink-0 rounded-xl ${tool.color} flex items-center justify-center border border-stone-100 shadow-sm overflow-hidden p-1.5`}>
                     {useLucide ? <i data-lucide={tool.icon || 'sparkles'} className="w-5 h-5"></i> : <img src={getLogo(tool.url)} className="w-full h-full object-contain" />}
@@ -171,7 +180,7 @@ const App = () => {
         </div>
     );
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400 animate-pulse">FIXING ENGINE...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-stone-400">RESTORING WORKSPACE...</div>;
 
     return (
         <div className="min-h-screen bg-[#FDFCF5]">
@@ -184,16 +193,11 @@ const App = () => {
                         </div>
                         <nav className="flex space-x-8">
                             {['AI 思考', '生產力', '影音媒體', '我的產出'].map((label, idx) => (
-                                <button key={label} onClick={() => {
-                                    const section = ['ai-sec', 'wf-sec', 'md-sec', 'out-sec'][idx];
-                                    document.getElementById(section)?.scrollIntoView({behavior:'smooth', block:'start'});
-                                }} className="text-[11px] font-black text-stone-400 hover:text-stone-900 uppercase tracking-widest">{label}</button>
+                                <button key={label} onClick={() => document.getElementById(['ai-sec', 'wf-sec', 'md-sec', 'out-sec'][idx])?.scrollIntoView({behavior:'smooth'})} className="text-[11px] font-black text-stone-400 hover:text-stone-900 uppercase tracking-widest">{label}</button>
                             ))}
                         </nav>
                     </div>
-                    <div className="font-mono text-xs font-bold bg-white px-4 py-2 rounded-xl border border-stone-200 text-stone-500 shadow-sm">
-                        {currentTime.toLocaleTimeString('zh-TW', { hour12: false })}
-                    </div>
+                    <div className="font-mono text-xs font-bold bg-white px-4 py-2 rounded-xl border border-stone-200 text-stone-500 shadow-sm">{currentTime.toLocaleTimeString('zh-TW', { hour12: false })}</div>
                 </div>
             </header>
 
@@ -201,20 +205,16 @@ const App = () => {
                 <section id="ai-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="brain"></i> AI Intelligence</h2><button onClick={()=>handleAdd('ai')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
                     <div ref={aiRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{aiTools.map(t=><ToolButton key={t.id} tool={t} type="ai"/>)}</div>
                 </section>
-
                 <section id="wf-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="rocket"></i> Workflow Automation</h2><button onClick={()=>handleAdd('wf')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
                     <div ref={workflowRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{workflowTools.map(t=><ToolButton key={t.id} tool={t} type="wf"/>)}</div>
                 </section>
-
                 <section id="md-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="video"></i> Creative Media</h2><button onClick={()=>handleAdd('md')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
                     <div ref={mediaRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{mediaTools.map(t=><ToolButton key={t.id} tool={t} type="md"/>)}</div>
                 </section>
-
                 <section id="out-sec"><div className="flex justify-between items-end mb-6 border-b border-stone-200 pb-4"><h2 className="text-2xl font-black text-stone-800 flex items-center gap-3"><i data-lucide="folder-kanban"></i> My Outputs</h2><button onClick={()=>handleAdd('out')} className="w-10 h-10 bg-stone-800 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button></div>
                     <div ref={outputsRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">{outputs.map(t=><ToolButton key={t.id} tool={t} type="out" useLucide={true}/>)}</div>
                 </section>
             </main>
-
             <footer className="text-center py-24 text-stone-300 text-[10px] font-black uppercase tracking-[0.5em]">Beige Studio &bull; Creative Workspace 2025</footer>
         </div>
     );
